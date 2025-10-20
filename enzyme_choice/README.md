@@ -221,15 +221,9 @@ pip install plotly dash pandas
 ## Citation
 
 If you use these scripts for enzyme selection in your Pore-C experiments, please cite:
-
-**Pore-C in Arabidopsis:**
-- Li Z, Long Y, Yu Y, Zhang F, Zhang H, Liu Z, et al. Pore-C simultaneously captures genome-wide multi-way chromatin interaction and associated DNA methylation status in Arabidopsis. *Plant Biotechnol J*. 2022;20(6):1009-11. doi:[10.1111/pbi.13811](https://doi.org/10.1111/pbi.13811) PMID: [35313066](https://pubmed.ncbi.nlm.nih.gov/35313066/)
-
-**Pore-C method protocol:**
-- Pore-C protocol: doi:[10.1038/s41596-020-00466-1](https://doi.org/10.1038/s41596-020-00466-1)
-
-**This repository:**
-- Henderson Lab Pore-C Analysis Pipeline: https://github.com/jacgonisa/porec_hendersonlab
+- This repository
+- Pore-C method: doi.org/10.1038/s41596-020-00466-1
+- Pore-C in Arabidopsis: Li Z, et al. Plant Biotechnol J. 2022;20(6):1009-11. doi.org/10.1111/pbi.13811
 
 ## Contact
 
