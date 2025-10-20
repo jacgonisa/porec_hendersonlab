@@ -5,6 +5,7 @@ Analysis pipelines and scripts for Hi-C and Pore-C chromatin conformation captur
 ## Overview
 
 This repository contains workflows for:
+- **Restriction enzyme selection** - In silico analysis to choose optimal enzymes (avoiding DpnII's centromere overdigestion)
 - **Hi-C analysis** using nf-core/hic pipeline
 - **Pore-C analysis** using epi2me-labs/wf-pore-c pipeline
 - **Monomer statistics** plotting and visualization for centromeric regions
@@ -13,6 +14,7 @@ This repository contains workflows for:
 
 ```
 .
+├── enzyme_choice/            # In silico enzyme selection analysis
 ├── scripts/
 │   ├── hic/                  # Hi-C pipeline scripts
 │   ├── porec/                # Pore-C pipeline scripts
@@ -40,6 +42,25 @@ This repository contains workflows for:
 These scripts are designed for SLURM-based HPC clusters. Adjust resource allocations in submission scripts as needed.
 
 ## Usage
+
+### 0. Enzyme Selection (Recommended First Step)
+
+Before running experiments, analyze which restriction enzyme is best suited for your genome:
+
+```bash
+# Generate comprehensive enzyme statistics
+python enzyme_choice/table_with_mean_and_sd_ratio.py \
+    reference.fa \
+    centromeres.bed \
+    > enzyme_comparison.csv
+
+# Or use the interactive visualizer
+python enzyme_choice/plot_re_v2.py reference.fa centromeres.bed
+```
+
+**Key finding for Arabidopsis:** DpnII (GATC) overdigests centromeric regions (Centromere/Arm ratio >1.5). We recommend **AlwI** or **NlaIII** instead for more balanced cutting.
+
+See [`enzyme_choice/README.md`](enzyme_choice/README.md) for detailed guidance.
 
 ### 1. Hi-C Analysis
 
