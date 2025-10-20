@@ -21,8 +21,10 @@ This repository contains workflows for:
 │   ├── porec/                # Pore-C pipeline scripts
 │   ├── plotting/             # Data visualization scripts
 │   └── utils/                # Utility scripts (filtlong, nanoplot, etc.)
+├── examples/
+│   ├── plots/                # Example monomer analysis plots
+│   └── slurm_submission_example.slurm
 ├── config/                   # Configuration files
-├── examples/                 # Example SLURM submission scripts
 └── docs/                     # Additional documentation
 ```
 
@@ -136,6 +138,8 @@ python scripts/plotting/plot_monomer_stats.py sample.cs.sam output_prefix
 This generates two plots:
 - `monomers_per_read_hist.png` - Distribution of contact monomers per read
 - `monomer_length_hist.png` - Distribution of monomer lengths
+
+**Example plots:** See [`examples/plots/`](examples/plots/) for example outputs
 
 The script automatically separates statistics for:
 - **Centromeric regions** (firebrick)
