@@ -249,14 +249,19 @@ python scripts/plotting/plot_monomer_stats.py sample.cs.sam AlwI_analysis
 
 - [nf-core/hic](https://nf-co.re/hic)
 - [epi2me-labs/wf-pore-c](https://github.com/epi2me-labs/wf-pore-c)
-- [Pore-C method paper](https://doi.org/10.1038/s41596-020-00466-1)
+- [Pore-C method protocol](https://doi.org/10.1038/s41596-020-00466-1)
 
 ## Citation
 
 If you use these pipelines, please cite:
-- Nextflow: doi.org/10.1038/nbt.3820
-- nf-core/hic: doi.org/10.1093/gigascience/giaa147
-- Pore-C: doi.org/10.1038/s41596-020-00466-1
+
+**Pore-C in Arabidopsis:**
+- Li Z, Long Y, Yu Y, Zhang F, Zhang H, Liu Z, et al. Pore-C simultaneously captures genome-wide multi-way chromatin interaction and associated DNA methylation status in Arabidopsis. *Plant Biotechnol J*. 2022;20(6):1009-11. doi:[10.1111/pbi.13811](https://doi.org/10.1111/pbi.13811) PMID: [35313066](https://pubmed.ncbi.nlm.nih.gov/35313066/)
+
+**Pipeline tools:**
+- Nextflow: doi:[10.1038/nbt.3820](https://doi.org/10.1038/nbt.3820)
+- nf-core/hic: doi:[10.1093/gigascience/giaa147](https://doi.org/10.1093/gigascience/giaa147)
+- Pore-C protocol: doi:[10.1038/s41596-020-00466-1](https://doi.org/10.1038/s41596-020-00466-1)
 
 ## License
 
