@@ -221,9 +221,9 @@ pip install plotly dash pandas
 ## Citation
 
 If you use these scripts for enzyme selection in your Pore-C experiments, please cite:
-- This repository
-- Pore-C method: doi.org/10.1038/s41596-020-00466-1
-- Pore-C in Arabidopsis: Li Z, et al. Plant Biotechnol J. 2022;20(6):1009-11. doi.org/10.1111/pbi.13811
+- This repository: https://github.com/jacgonisa/porec_hendersonlab
+- Pore-C protocol: Ulahannan N, et al. Nat Biotechnol. 2022. PMID: 35637420
+- Pore-C in Arabidopsis: Li Z, et al. Plant Biotechnol J. 2022;20(6):1009-11. PMID: 35313066
 
 ## Contact
 
