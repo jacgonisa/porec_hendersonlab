@@ -1,6 +1,6 @@
 # PoreC Analysis Pipeline
 
-Analysis pipelines and scripts for Hi-C and Pore-C chromatin conformation capture data analysis at Henderson Lab.
+A 3C genomics project to understand centromeres better through Hi-C and Pore-C chromatin conformation capture analysis at Henderson Lab.
 
 ## Overview
 
