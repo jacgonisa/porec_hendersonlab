@@ -1,0 +1,232 @@
+# PoreC Analysis Pipeline
+
+Analysis pipelines and scripts for Hi-C and Pore-C chromatin conformation capture data analysis at Henderson Lab.
+
+## Overview
+
+This repository contains workflows for:
+- **Hi-C analysis** using nf-core/hic pipeline
+- **Pore-C analysis** using epi2me-labs/wf-pore-c pipeline
+- **Monomer statistics** plotting and visualization for centromeric regions
+
+## Repository Structure
+
+```
+.
+├── scripts/
+│   ├── hic/                  # Hi-C pipeline scripts
+│   ├── porec/                # Pore-C pipeline scripts
+│   ├── plotting/             # Data visualization scripts
+│   └── utils/                # Utility scripts (filtlong, nanoplot, etc.)
+├── config/                   # Configuration files
+├── examples/                 # Example SLURM submission scripts
+└── docs/                     # Additional documentation
+```
+
+## Requirements
+
+### Software Dependencies
+- [Nextflow](https://www.nextflow.io/) (>=21.04.0)
+- [Singularity](https://sylabs.io/singularity/) or Docker
+- Python 3.7+ with:
+  - matplotlib
+  - numpy
+  - seaborn
+- [Samtools](http://www.htslib.org/)
+- [Filtlong](https://github.com/rrwick/Filtlong) (optional, for read filtering)
+- [NanoPlot](https://github.com/wdecoster/NanoPlot) (optional, for QC)
+
+### HPC Environment
+These scripts are designed for SLURM-based HPC clusters. Adjust resource allocations in submission scripts as needed.
+
+## Usage
+
+### 1. Hi-C Analysis
+
+Run the nf-core/hic pipeline with paired-end short reads:
+
+```bash
+nextflow run nf-core/hic \
+   -profile singularity \
+   --input samplesheet.csv \
+   --fasta reference.fa \
+   --outdir results_hic \
+   --digestion "dpnii"
+```
+
+See `scripts/hic/run_hic_nextflow.sh` for a working example.
+
+### 2. Pore-C Analysis
+
+Run the epi2me-labs/wf-pore-c pipeline with Oxford Nanopore long reads:
+
+```bash
+nextflow run epi2me-labs/wf-pore-c \
+   -profile singularity \
+   --fastq reads.fastq \
+   --chunk_size 20000 \
+   --cutter NlaIII \
+   --hi_c \
+   --mcool \
+   --pairs \
+   --coverage \
+   --ref reference.fa \
+   --threads 19 \
+   --out_dir results_porec
+```
+
+**Common restriction enzymes:**
+- `NlaIII` - 4-cutter (CATG^)
+- `DpnII` - 4-cutter (^GATC)
+- `AlwI` - 4-cutter (GGATC)
+- `BglII` - 6-cutter (A^GATCT)
+- `MluI` - 6-cutter (A^CGCGT)
+
+See `scripts/porec/run_porec_analysis.sh` for a working example.
+
+#### SLURM Submission
+
+For cluster job submission:
+
+```bash
+sbatch scripts/porec/sub_porec.sh <enzyme> <barcode>
+```
+
+Example:
+```bash
+sbatch scripts/porec/sub_porec.sh AlwI 01
+```
+
+### 3. Monomer Statistics Plotting
+
+After Pore-C analysis, visualize monomers per read and monomer length distributions:
+
+**Step 1: Convert BAM to SAM**
+```bash
+samtools view -h results_porec/bams/sample.cs.bam > sample.cs.sam
+```
+
+**Step 2: Generate plots**
+```bash
+python scripts/plotting/plot_monomer_stats.py sample.cs.sam output_prefix
+```
+
+This generates two plots:
+- `monomers_per_read_hist.png` - Distribution of contact monomers per read
+- `monomer_length_hist.png` - Distribution of monomer lengths
+
+The script automatically separates statistics for:
+- **Centromeric regions** (firebrick)
+- **Chromosome arms** (steelblue)
+
+**Centromere coordinates (Arabidopsis thaliana Col-0):**
+- Chr1: 14,841,147 - 17,216,861
+- Chr2: 4,621,558 - 6,841,935
+- Chr3: 13,596,351 - 15,826,119
+- Chr4: 5,208,113 - 7,982,091
+- Chr5: 12,402,000 - 15,178,500
+
+## Utilities
+
+### Quality Filtering with Filtlong
+
+Filter reads by quality and length:
+
+```bash
+filtlong --min_length 1000 --min_mean_q 10 input.fastq > output.filtered.fastq
+```
+
+See `scripts/utils/filtlong.sh`
+
+### QC with NanoPlot
+
+Generate quality control plots:
+
+```bash
+NanoPlot --fastq input.fastq -o nanoplot_output/
+```
+
+See `scripts/utils/nanoplot.sh`
+
+## Example Workflows
+
+### Complete Pore-C Analysis Pipeline
+
+```bash
+# 1. Optional: Filter reads
+filtlong --min_length 1000 --min_mean_q 10 raw_reads.fastq > filtered_reads.fastq
+
+# 2. Optional: QC
+NanoPlot --fastq filtered_reads.fastq -o qc_results/
+
+# 3. Run Pore-C pipeline
+nextflow run epi2me-labs/wf-pore-c \
+   -profile singularity \
+   --fastq filtered_reads.fastq \
+   --cutter AlwI \
+   --ref reference.fa \
+   --out_dir results_AlwI
+
+# 4. Convert BAM to SAM
+samtools view -h results_AlwI/bams/sample.cs.bam > sample.cs.sam
+
+# 5. Generate monomer statistics plots
+python scripts/plotting/plot_monomer_stats.py sample.cs.sam AlwI_analysis
+```
+
+## Output Files
+
+### Pore-C Pipeline Outputs
+- `bams/` - Aligned reads with contact annotations
+- `pairs/` - Contact pairs in .pairs format
+- `mcool/` - Multi-resolution cooler files for visualization
+- `hic/` - .hic format files (if `--hi_c` enabled)
+- `coverage/` - Genomic coverage tracks
+
+### Monomer Plots
+- `monomers_per_read_hist.png` - Histogram showing distribution of monomers detected per read
+- `monomer_length_hist.png` - Histogram showing distribution of individual monomer lengths
+
+## Configuration Notes
+
+### Memory and CPU Requirements
+- **Hi-C pipeline**: 64 GB RAM, 32 CPUs recommended
+- **Pore-C pipeline**: 128 GB RAM, 64 CPUs recommended (adjust `--chunk_size` if memory limited)
+
+### Nextflow Profiles
+- `singularity` - Uses Singularity containers (recommended for HPC)
+- `docker` - Uses Docker containers
+- `standard` - Local execution without containers
+
+## Troubleshooting
+
+**Issue: Nextflow fails with "Cannot find revision"**
+- Solution: Ensure internet connection for pipeline download, or use `-offline` with cached pipelines
+
+**Issue: Out of memory errors in Pore-C**
+- Solution: Reduce `--chunk_size` parameter (default: 20000)
+
+**Issue: No monomers detected in plots**
+- Solution: Check that BAM file contains `Xw:Z:` tags (contact walks)
+
+## References
+
+- [nf-core/hic](https://nf-co.re/hic)
+- [epi2me-labs/wf-pore-c](https://github.com/epi2me-labs/wf-pore-c)
+- [Pore-C method paper](https://doi.org/10.1038/s41596-020-00466-1)
+
+## Citation
+
+If you use these pipelines, please cite:
+- Nextflow: doi.org/10.1038/nbt.3820
+- nf-core/hic: doi.org/10.1093/gigascience/giaa147
+- Pore-C: doi.org/10.1038/s41596-020-00466-1
+
+## License
+
+MIT License
+
+## Contact
+
+Henderson Lab
+Questions: Open an issue on GitHub

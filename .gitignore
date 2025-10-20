@@ -1,0 +1,101 @@
+# Large data files
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.bam
+*.bai
+*.sam
+*.cram
+
+# Reference genomes
+*.fa
+*.fasta
+*.fna
+*.fa.gz
+*.fasta.gz
+*.fai
+
+# Hi-C/Pore-C output files
+*.hic
+*.mcool
+*.cool
+*.pairs
+*.pairs.gz
+
+# Compressed archives
+*.tar
+*.tar.gz
+*.zip
+*.7z
+
+# Nextflow work directories
+work/
+.nextflow/
+.nextflow.log*
+*.nextflow.log*
+
+# Pipeline results directories
+results*/
+output*/
+*_output/
+demultiplex*/
+
+# SLURM output files
+slurm*.out
+slurm*.err
+*.o[0-9]*
+*.e[0-9]*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# R
+.Rhistory
+.RData
+.Rproj.user/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Conda
+*.yml.lock
+environment.lock
+
+# MultiQC
+multiqc_data/
+multiqc_report.html
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Log files
+*.log
+
+# Large plots (but keep smaller example plots)
+# Remove this if you want to track plots
+# *.png
+# *.pdf
+# *.svg
+
+# Specific large directories
+fastq_pass/
+pod5/
+fast5/
