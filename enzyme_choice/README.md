@@ -190,10 +190,17 @@ Homogeneity 1.0-2.0 → Moderate variability
 Homogeneity < 1.0 → Highly variable spacing (clusters and gaps)
 ```
 
-## Related Publication
+## Detailed Report
 
-For detailed methodology and results, see:
-`Enzyme choice report.pdf` (not included in repository due to size)
+For comprehensive methodology, results, and figures, see:
+**`Enzyme choice report.pdf`**
+
+This report includes:
+- Detailed visualization of cut sites across all chromosomes
+- Statistical comparisons of multiple restriction enzymes
+- Figures showing centromere vs arm cutting patterns
+- Complete methodology and interpretation guidelines
+- Recommendations for enzyme selection in Arabidopsis
 
 ## Requirements
 

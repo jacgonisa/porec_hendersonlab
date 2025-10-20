@@ -14,7 +14,8 @@ This repository contains workflows for:
 
 ```
 .
-├── enzyme_choice/            # In silico enzyme selection analysis
+├── enzyme_choice/            # In silico enzyme selection analysis (with PDF report)
+├── reference_data/           # Documentation for published Hi-C datasets
 ├── scripts/
 │   ├── hic/                  # Hi-C pipeline scripts
 │   ├── porec/                # Pore-C pipeline scripts
@@ -168,6 +169,20 @@ NanoPlot --fastq input.fastq -o nanoplot_output/
 ```
 
 See `scripts/utils/nanoplot.sh`
+
+## Reference Hi-C Data
+
+We process published Hi-C datasets for comparison with our Pore-C data:
+
+- **Sakamoto et al.** - Arabidopsis Hi-C (DRR327470, DRR327471)
+- **Teano et al.** - Arabidopsis Hi-C replicates (SRR13739209, SRR13739213)
+
+These datasets serve as:
+- Validation controls for pipeline correctness
+- Comparison baseline for centromere interaction patterns
+- Reference for evaluating DpnII overdigestion vs our AlwI/NlaIII approach
+
+See [`reference_data/README.md`](reference_data/README.md) for detailed information on downloading and processing these datasets.
 
 ## Example Workflows
 
