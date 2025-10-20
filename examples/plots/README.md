@@ -30,9 +30,9 @@ This histogram shows the distribution of distances between consecutive cut sites
 ## Dataset Information
 
 - **Organism:** *Arabidopsis thaliana* (Col-0)
-- **Restriction enzyme:** AlwI (GGATC)
+- **Restriction enzyme:** AlwI (GGATC^)
 - **Sequencing:** Oxford Nanopore long-read sequencing
-- **Analysis date:** September 2025
+- **Data:** Real experimental Pore-C data (July 2025)
 
 ## Interpreting These Plots
 
