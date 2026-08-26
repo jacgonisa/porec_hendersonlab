@@ -18,9 +18,13 @@ button { font:inherit; font-weight:600; cursor:pointer; border:0; border-radius:
 button:disabled { opacity:.45; cursor:not-allowed; }
 button.ghost { background:#eef2f6; color:var(--ink); }
 button.small { padding:4px 10px; font-size:13px; float:right; }
-.enzpanel { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:8px 16px; }
-.enz { display:flex; align-items:center; gap:8px; font-weight:500; }
+.enztools { display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
+.enztools input { flex:1; min-width:200px; }
+.enzlist { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:4px 14px; max-height:280px; overflow:auto; border:1px solid var(--line); border-radius:8px; padding:10px; background:#fafbfc; }
+.enz { display:flex; align-items:center; gap:7px; font-weight:500; font-size:14px; }
 .enz code { color:var(--mut); font-size:13px; }
+.enz .star { color:#d69e2e; }
+.tablefilter { width:100%; max-width:340px; margin-bottom:10px; }
 .run { text-align:center; }
 .run button { padding:11px 28px; font-size:16px; }
 .progress { margin-top:14px; height:22px; background:#eef2f6; border-radius:11px; position:relative; overflow:hidden; }

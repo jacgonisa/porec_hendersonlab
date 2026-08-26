@@ -3,16 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pore-C Enzyme Chooser</title>
+<title>Pore-C Enzyme Explorer</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 </head>
 <body>
 <header>
-  <h1>Pore-C in-silico restriction-enzyme chooser</h1>
-  <p class="sub">Upload a genome FASTA + a centromere BED. Everything runs in your browser —
-  no data leaves your machine. Picks the enzyme that digests centromeres and arms most evenly,
-  the way <a href="https://github.com/jacgonisa/porec_hendersonlab" target="_blank" rel="noopener">the lab benchmark</a> does.</p>
+  <h1>Pore-C in-silico restriction-enzyme explorer</h1>
+  <p class="sub">Upload a genome FASTA + a centromere BED and explore how any NEB restriction enzyme
+  would digest it — cut density, fragment (monomer) lengths, and centromere-vs-arm balance, per chromosome.
+  Everything runs in your browser; no data is uploaded. Based on the
+  <a href="https://github.com/jacgonisa/porec_hendersonlab" target="_blank" rel="noopener">Henderson-lab benchmark</a>.</p>
 </header>
 
 <main>
@@ -20,46 +21,47 @@
     <h2>1 · Inputs</h2>
     <div class="inputs">
       <label>Genome FASTA <small>(.fa / .fasta / .fa.gz)</small>
-        <input type="file" id="fasta" accept=".fa,.fasta,.fna,.fa.gz,.fasta.gz,.fna.gz,.gz">
-      </label>
+        <input type="file" id="fasta" accept=".fa,.fasta,.fna,.fa.gz,.fasta.gz,.fna.gz,.gz"></label>
       <label>Centromere BED <small>(chrom, start, end)</small>
-        <input type="file" id="bed" accept=".bed,.txt,.tsv">
-      </label>
-      <button id="example" class="ghost">Load example data</button>
+        <input type="file" id="bed" accept=".bed,.txt,.tsv"></label>
+      <button id="example" class="ghost">Load Arabidopsis example</button>
     </div>
     <p class="filestatus" id="filestatus"></p>
   </section>
 
   <section class="card">
-    <h2>2 · Enzymes</h2>
-    <div id="enzpanel" class="enzpanel"></div>
+    <h2>2 · Enzymes <span id="enzcount" class="hint" style="float:right;font-weight:400"></span></h2>
+    <div class="enztools">
+      <input type="text" id="enzsearch" placeholder="filter enzymes / sites (e.g. GATC, AlwI, 6)">
+      <button id="selBench" class="ghost small">Benchmarked 9</button>
+      <button id="selAll" class="ghost small">Select all NEB</button>
+      <button id="selNone" class="ghost small">Clear</button>
+    </div>
+    <div id="enzlist" class="enzlist"></div>
     <label class="custom">Custom motifs <small>(comma-separated, IUPAC ok — e.g. GANTC, CCWGG)</small>
-      <input type="text" id="custom" placeholder="e.g. GANTC, CCWGG">
-    </label>
+      <input type="text" id="custom" placeholder="e.g. GANTC, CCWGG"></label>
   </section>
 
   <section class="card run">
     <button id="run" disabled>Analyse</button>
+    <p class="hint" id="runhint"></p>
     <div id="progress" class="progress hidden"><div id="bar"></div><span id="pmsg"></span></div>
     <p id="warn" class="warn hidden"></p>
   </section>
 
   <section id="results" class="hidden">
     <div class="card">
-      <h2>Recommendation</h2>
-      <div id="reco"></div>
-    </div>
-
-    <div class="card">
-      <h2>Enzyme ranking <button id="csv" class="ghost small">Download CSV</button></h2>
-      <p class="hint">Sorted by suitability score. Click a column header to re-sort.</p>
+      <h2>Metrics <button id="csv" class="ghost small">Download CSV</button></h2>
+      <p class="hint">Click a column header to sort. Type to filter. All metrics are computable from sequence alone.</p>
+      <input type="text" id="tablefilter" placeholder="filter table…" class="tablefilter">
       <div class="tablewrap"><table id="ranktable"></table></div>
     </div>
 
     <div class="card">
       <h2>Balance map</h2>
-      <p class="hint">Ideal enzyme sits near <b>x = 0</b> (equal cutting in centromere &amp; arms).
-      Points left = over-cuts centromere (bad, e.g. DpnII); right = under-cuts it.</p>
+      <div class="selrow"><label>Region <select id="scChrom"></select></label></div>
+      <p class="hint"><b>x = 0</b> means equal cutting in centromere &amp; arms. Left = over-cuts centromere; right = under-cuts it.
+      Marker colour = density difference. Hover for the enzyme.</p>
       <div id="scatter" class="plot"></div>
     </div>
 
@@ -68,22 +70,29 @@
       <div class="selrow">
         <label>Chromosome <select id="trackChrom"></select></label>
         <label>Enzyme <select id="trackEnz"></select></label>
+        <label>Bin size <select id="trackBin">
+          <option value="200">200 bp</option><option value="500">500 bp</option>
+          <option value="1000" selected>1 kb</option><option value="2000">2 kb</option>
+          <option value="5000">5 kb</option><option value="10000">10 kb</option></select></label>
       </div>
       <div id="track" class="plot"></div>
     </div>
 
     <div class="card">
       <h2>Predicted monomer (fragment) lengths</h2>
-      <div class="selrow"><label>Enzyme <select id="monoEnz"></select></label></div>
-      <p class="hint">Distance between cuts ≈ Pore-C monomer length. Nanopore sweet spot ~0.8–1.4 kb.</p>
+      <div class="selrow">
+        <label>Region <select id="monoChrom"></select></label>
+        <label>Enzyme <select id="monoEnz"></select></label>
+      </div>
+      <p class="hint">Distance between cuts ≈ Pore-C monomer length. Nanopore sweet spot ~0.8–1.4 kb (dotted lines).</p>
       <div id="mono" class="plot"></div>
     </div>
   </section>
 </main>
 
 <footer>
-  <p>Method: ports <code>enzyme_choice/table_with_mean_and_sd_ratio.py</code> to the browser
-  (palindromic motifs counted once). In-silico spacing correlates with experimental monomer length at R²≈0.86.</p>
+  <p>Ports <code>enzyme_choice/table_with_mean_and_sd_ratio.py</code> to the browser (palindromic motifs counted once).
+  Enzyme set: NEB-supplied enzymes from REBASE (via Biopython). In-silico spacing correlates with experimental monomer length at R²≈0.86.</p>
 </footer>
 
 <script src="app.js"></script>

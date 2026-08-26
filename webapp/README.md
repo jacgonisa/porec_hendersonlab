@@ -1,80 +1,79 @@
-# Pore-C Enzyme Chooser (web app)
+# Pore-C Enzyme Explorer (web app)
 
-A zero-backend browser app: drop in a **genome FASTA** + a **centromere BED**,
-get an in-silico restriction-enzyme ranking, metrics, and plots for a Pore-C
-experiment. Everything runs client-side — **no data leaves the browser**, so
-unpublished genomes are safe.
+A zero-backend browser app for **exploring** restriction-enzyme choice for
+Pore-C. Drop in a **genome FASTA** + a **centromere BED** and inspect, for any
+NEB enzyme, its cut density, predicted fragment (monomer) lengths, and
+centromere-vs-arm balance — genome-wide and **per chromosome**. Everything runs
+client-side, so **no data leaves the browser**.
 
-It ports [`enzyme_choice/table_with_mean_and_sd_ratio.py`](../enzyme_choice/)
-to JavaScript. The goal is the same one the lab benchmark proved (in-silico cut
-spacing correlates with experimental monomer length at R²≈0.86): pick the enzyme
-that digests centromeres and arms most **evenly**, avoiding DpnII-style
-over-digestion of AT-rich centromeres.
+It's exploratory by design: no "best enzyme" is prescribed. You get the metrics
+and plots; you decide.
+
+Live: **https://jacgonisa.github.io/porec_hendersonlab/webapp/**
 
 ## Use it
-1. Open the hosted page (see *Deploy* below) or `index.html` via a local server.
-2. Upload a genome FASTA (`.fa`, `.fasta`, `.fna`, or gzipped `.fa.gz`) and a
-   centromere BED (`chrom  start  end`).
-3. Tick the enzymes to test (add custom IUPAC motifs if you like) → **Analyse**.
-4. Read the recommendation, sortable metrics table, balance map, per-chromosome
-   cut-density track, and predicted monomer-length histograms. Download the full
-   per-chromosome table as CSV.
+1. Upload a genome FASTA (`.fa`/`.fasta`/`.fna`, plain or gzipped) and a
+   centromere BED (`chrom  start  end`), or click **Load Arabidopsis example**
+   (bundled Col-0 genome + centromeres).
+2. Pick enzymes: the **benchmarked 9** are ticked by default; **Select all NEB**
+   screens the whole catalog (236 enzymes / 204 unique recognition sites); or
+   search/add custom IUPAC motifs.
+3. **Analyse**, then explore:
+   - **Metrics table** — sortable + filterable; every enzyme, no ranking imposed.
+     Download the full per-chromosome table as CSV.
+   - **Balance map** — density-difference vs homogeneity-difference per enzyme,
+     genome-wide or for a chosen chromosome. `x=0` = equal cutting in centromere
+     and arms.
+   - **Cut-density track** — per chromosome, per enzyme, at a **selectable bin
+     size (200 bp – 10 kb)**, centromere shaded.
+   - **Monomer-length histogram** — predicted fragment sizes, centromere vs arm,
+     genome-wide or per chromosome.
 
-Or click **Load example data** to run a bundled synthetic genome
-(`example/demo.fa` + `example/demo.bed`) where an AT-cutter (MluCI) visibly
-over-digests the AT-rich centromere.
+## Enzyme set
+NEB-supplied enzymes pulled from REBASE via Biopython (`Bio.Restriction`),
+grouped by recognition site (isoschizomers share a row; hover the table row to
+see them). Sites shorter than 4 bp are excluded. Regenerate with
+`python3 make_enzymes.py` if you want to refresh the catalog. Methylation-
+dependent enzymes (DpnI, MspJI, …) are shown by recognition sequence only —
+in-silico counts don't reflect their real methylation-gated cutting.
 
-## Inputs & robustness
-- **FASTA** streamed and scanned in a Web Worker, so a ~130 MB plant genome
-  stays responsive. gzip is handled natively (`DecompressionStream`).
-- **BED** accepts standard `chrom start end` and the lab's
-  `id  name  start  end` variant (start/end are auto-detected).
-- **Chromosome names** are matched leniently: `Chr1:1-32640075`, `chr1` and `1`
-  all resolve to the same chromosome. Any BED entry that matches no FASTA
-  sequence is reported as a warning.
+## What it computes / fixes
+Per enzyme, both strands are scanned (non-overlapping, like Python
+`re.finditer`) and **palindromic motifs are counted once** — the original lab
+scripts scan motif + reverse-complement and concatenate, double-counting
+palindromes (GATC, CATG, CTAG, AATT …) and inflating their density vs
+non-palindromic enzymes. Verified: non-palindromic enzymes (AlwI, BbsI …) match
+the ground-truth `enzyme_choice/validation/correlation_exp_insilico.csv` to 3
+decimals; palindromes come out at exactly ½ the old (buggy) counts.
 
-### What it fixes vs the Python scripts
-Palindromic motifs (GATC, CATG, CTAG, AATT, …) are counted **once**, not twice.
-The original scripts scan motif + reverse-complement and concatenate, so a
-palindrome (whose revcomp is itself) is double-counted — which also inflated its
-density relative to non-palindromic enzymes. The app dedupes positions, giving a
-fair cross-enzyme comparison. (So palindrome counts here are ~½ of the old CSVs;
-non-palindromic enzymes like AlwI/BbsI are unchanged — verified identical to the
-ground-truth CSV to 3 decimals.)
+Metrics = cut density (cuts/kb) for centromere and arms, their difference and
+ratio, mean/std spacing (≈ monomer length), and homogeneity (mean/std spacing).
+In-silico spacing correlates with experimental monomer length at R²≈0.86.
 
-### Suitability score (transparent)
-`0.5·balance + 0.3·fragment-size + 0.2·uniformity`, all in [0,1]:
-- **balance** — small |CEN−arm density difference| (near 0 = even cutting).
-- **fragment-size** — mean monomer length in the nanopore sweet spot ~0.8–1.4 kb.
-- **uniformity** — high, and similar, homogeneity (mean/std spacing) in both regions.
-- enzymes with too few centromere/arm cuts are penalised.
+## Performance & limits
+- Practical for plant-sized genomes (largest chromosome ≲ 200 Mb). A full
+  204-site NEB screen of the ~125 Mb Arabidopsis genome takes ~40–90 s in the
+  browser (progress bar shown); the benchmarked-9 example run is a few seconds.
+- Screening the full NEB set keeps ~150 MB of cut positions in memory (so tracks
+  can re-bin at any resolution) — fine on a desktop; screen fewer enzymes on
+  low-RAM machines.
+- Mammalian 3 GB genomes are impractical to upload in-browser — out of scope;
+  use the Python scripts in `enzyme_choice/`.
 
-Every input metric is shown in the table, so the ranking is auditable.
-
-## Limits
-- Practical for plant-sized genomes (largest chromosome ≲ 200 Mb). Mammalian
-  3 GB genomes are impractical to upload in-browser — out of scope; use the
-  Python scripts for those.
-
-## Deploy (GitHub Pages)
-The app is plain static files — no build step.
-1. Push this `webapp/` folder to the repo.
-2. Repo **Settings → Pages** → *Deploy from a branch* → branch `main`, folder
-   `/webapp` isn't directly selectable, so either (a) set Pages source to
-   `/ (root)` and move these files to the repo root, **or** (b) enable Pages on
-   the branch root and link to `…/webapp/`, **or** (c) use a `docs/` folder.
-   Simplest: enable Pages (root), then the app lives at
-   `https://<user>.github.io/porec_hendersonlab/webapp/`.
-3. Netlify alternative: drag the `webapp/` folder onto app.netlify.com — done.
+## Hosting
+Plain static files, no build step — **GitHub Pages hosts it fine** (the bundled
+34 MB gzipped genome is well under the 100 MB file limit; all compute is
+client-side). Netlify works too (drag the `webapp/` folder onto app.netlify.com).
+Pages is configured to deploy from `main` / root, so the app lives at
+`…github.io/porec_hendersonlab/webapp/`.
 
 ## Dev
-- Run locally: `python3 -m http.server` in this folder, open
-  `http://localhost:8000/`. (A `file://` open won't work — Workers and `fetch`
-  need http.)
-- Logic test: `node webapp/test.mjs` (uses the committed example genome).
-- Manual smoke test: open `index.html#selftest` — it auto-loads the example and
-  runs, and sets `document.body.dataset.done` to the top enzyme when finished.
+- Run locally: `python3 -m http.server` here, open `http://localhost:8000/`
+  (a `file://` open won't work — Workers and `fetch` need http).
+- Logic test: `node webapp/test.mjs` (self-contained).
+- Manual smoke test: open `index.html#selftest` — auto-loads the example and runs.
 
 ## Files
-`index.html` · `app.js` (UI, scoring, plots, CSV) · `worker.js` (streaming scan
-+ metrics) · `style.css` · `example/` · `test.mjs`.
+`index.html` · `app.js` (UI, table, plots, CSV) · `worker.js` (streaming scan →
+per-enzyme cut positions + metrics) · `style.css` · `neb_enzymes.json` ·
+`make_enzymes.py` · `example/` (Arabidopsis genome + BED) · `test.mjs`.
