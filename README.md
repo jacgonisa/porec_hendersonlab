@@ -5,7 +5,7 @@ A 3C genomics project to understand centromeres better through Hi-C and Pore-C c
 ## Overview
 
 This repository contains workflows for:
-- **Restriction enzyme selection** - In silico analysis to choose optimal enzymes (avoiding DpnII's centromere overdigestion)
+- **Restriction enzyme selection** - In silico analysis to choose optimal enzymes (avoiding DpnII's centromere overdigestion). Also available as a no-install browser app: [`webapp/`](webapp/) — upload a genome FASTA + centromere BED and get the enzyme ranking, metrics, and plots (hostable on GitHub Pages).
 - **Hi-C analysis** using nf-core/hic pipeline
 - **Pore-C analysis** using epi2me-labs/wf-pore-c pipeline
 - **Monomer statistics** plotting and visualization for centromeric regions
@@ -15,6 +15,7 @@ This repository contains workflows for:
 ```
 .
 ├── enzyme_choice/            # In silico enzyme selection analysis (with PDF report)
+├── webapp/                   # Browser app for enzyme selection (FASTA + BED → plots)
 ├── reference_data/           # Documentation for published Hi-C datasets
 ├── scripts/
 │   ├── hic/                  # Hi-C pipeline scripts
