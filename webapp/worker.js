@@ -128,7 +128,7 @@ async function run(file, enzymes, bedList) {
     return { name: en.name, motif: en.motif, baseLen: en.motif.length, palindrome: en.palindrome,
       totalSites: a.totalSites, cenSites: a.cenSites, armSites: a.armSites,
       cenDensity: cD, armDensity: aD, densityDiff: cD - aD, ratio: aD > 0 ? cD / aD : Infinity,
-      cenMean, cenStd, armMean, armStd,
+      cenMean: cMean, cenStd: cStd, armMean: aMean, armStd: aStd,
       cenHom: cMean > 0 ? cMean / (cStd + eps) : NaN, armHom: aMean > 0 ? aMean / (aStd + eps) : NaN,
       homDiff: (cMean > 0 ? cMean / (cStd + eps) : NaN) - (aMean > 0 ? aMean / (aStd + eps) : NaN) };
   });
