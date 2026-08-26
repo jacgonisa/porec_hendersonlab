@@ -1,5 +1,6 @@
 'use strict';
 
+const APP_VERSION = 4; // bump whenever worker.js changes, to bypass browser worker cache
 const $ = (id) => document.getElementById(id);
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const normChrom = (s) => String(s).toLowerCase().split(/[:\s]/)[0].replace(/^chr(omosome)?[_\-]?/, '');
@@ -98,7 +99,7 @@ $('run').onclick = () => {
   if (!enzymes.length) { alert('Pick at least one enzyme.'); return; }
   $('run').disabled = true; $('warn').classList.add('hidden');
   $('progress').classList.remove('hidden'); setBar(0, 'starting…');
-  const worker = new Worker('worker.js');
+  const worker = new Worker('worker.js?v=' + APP_VERSION); // ?v busts stale worker cache
   worker.onmessage = (ev) => {
     const d = ev.data;
     if (d.type === 'progress') {
