@@ -1,6 +1,6 @@
 'use strict';
 
-const APP_VERSION = 4; // bump whenever worker.js changes, to bypass browser worker cache
+const APP_VERSION = 6; // bump whenever worker.js changes, to bypass browser worker cache
 const $ = (id) => document.getElementById(id);
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const normChrom = (s) => String(s).toLowerCase().split(/[:\s]/)[0].replace(/^chr(omosome)?[_\-]?/, '');
@@ -16,7 +16,7 @@ fetch('neb_enzymes.json').then(r => r.json()).then(list => {
   ENZYMES = list.map(e => {
     const name = (e.bench[0] || e.enzymes[0]);
     return { ...e, name, search: (e.site + ' ' + e.enzymes.join(' ') + ' ' + e.len + 'bp').toLowerCase() };
-  });
+  }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
   buildEnzList();
   selectSites(new Set(ENZYMES.filter(e => e.bench.length).map(e => e.site))); // benchmarked default
 });
@@ -51,7 +51,7 @@ function selectedEnzymes() {
   });
   for (const m of $('custom').value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean))
     if (/^[ACGTRYSWKMBDHVN]+$/.test(m) && !seen.has(m)) { seen.add(m); out.push({ name: m, motif: m, enzymes: [m] }); }
-  return out;
+  return out.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 }
 function updateCount() {
   const n = selectedEnzymes().length;
@@ -122,6 +122,8 @@ function render(d, enzymes) {
   lastRun = d;
   d.enzByName = new Map(enzymes.map(e => [e.name, e]));
   d.ivByChrom = new Map(d.chromMeta.map(c => [c.name, c.intervals]));
+  d.lenByChrom = new Map(d.chromMeta.map(c => [c.name, c.len]));
+  d.genomeLen = d.chromMeta.reduce((s, c) => s + c.len, 0);
   d.chroms = d.chromMeta.map(c => c.name);
   d.rowsByChrom = {};
   for (const r of d.perChromRows) (d.rowsByChrom[r.Chromosome] = d.rowsByChrom[r.Chromosome] || []).push(r);
@@ -155,7 +157,7 @@ const COLS = [
   ['cenHom', 'CEN homog.', s => s.cenHom, 2], ['armHom', 'Arm homog.', s => s.armHom, 2],
   ['totalSites', 'Total sites', s => s.totalSites, 'int'],
 ];
-let sortKey = 'totalSites', sortDir = -1;
+let sortKey = 'name', sortDir = 1;
 function renderTable(d) {
   const q = $('tablefilter').value.toLowerCase().trim();
   let rows = d.summary;
@@ -179,36 +181,69 @@ function renderTable(d) {
 // balance map (genome-wide or per chromosome) -------------------------------
 function renderScatter(d) {
   const sel = $('scChrom').value;
+  const kb = 1000;
   let pts;
-  if (sel === 'Genome-wide') pts = d.summary.map(s => ({ name: s.name, dd: s.densityDiff, hd: s.homDiff, tot: s.totalSites }));
-  else pts = (d.rowsByChrom[sel] || []).map(r => ({ name: r.Enzyme, dd: r['Density Difference (Cen - Arm)'], hd: r['Homogeneity Difference (Cen - Arm)'], tot: r['Total Sites'] }));
+  if (sel === 'Genome-wide') pts = d.summary.map(s => ({ name: s.name, dd: s.densityDiff, hd: s.homDiff, cpk: s.totalSites / (d.genomeLen / kb) }));
+  else { const len = d.lenByChrom.get(sel) || 1;
+    pts = (d.rowsByChrom[sel] || []).map(r => ({ name: r.Enzyme, dd: r['Density Difference (Cen - Arm)'], hd: r['Homogeneity Difference (Cen - Arm)'], cpk: r['Total Sites'] / (len / kb) })); }
   pts = pts.filter(p => Number.isFinite(p.dd) && Number.isFinite(p.hd));
   const many = pts.length > 40;
+  // colour = overall cut density (cuts/kb), log-scaled so the wide range is legible
+  const logv = pts.map(p => Math.log10(Math.max(p.cpk, 1e-3)));
   Plotly.newPlot('scatter', [{
-    x: pts.map(p => p.dd), y: pts.map(p => p.hd), text: pts.map(p => p.name),
+    x: pts.map(p => p.dd), y: pts.map(p => p.hd), text: pts.map(p => p.name), customdata: pts.map(p => p.cpk),
     mode: many ? 'markers' : 'markers+text', textposition: 'top center', type: 'scattergl',
-    marker: { size: pts.map(p => 8 + 4 * Math.log10(1 + p.tot)), color: pts.map(p => p.dd), colorscale: 'RdBu', reversescale: true, cmid: 0, showscale: true, colorbar: { title: 'Δ dens' }, line: { width: 0.5, color: '#456' } },
-    hovertemplate: '%{text}<br>Δdensity %{x:.2f} cuts/kb<br>Δhomog %{y:.2f}<extra></extra>',
+    marker: { size: 11, color: logv, colorscale: 'Viridis', showscale: true,
+      colorbar: { title: 'cuts/kb', tickvals: [-2, -1, 0, 1, 2], ticktext: ['0.01', '0.1', '1', '10', '100'] }, line: { width: 0.5, color: '#456' } },
+    hovertemplate: '%{text}<br>Δdensity %{x:.2f} cuts/kb<br>Δhomog %{y:.2f}<br>overall %{customdata:.2f} cuts/kb<extra></extra>',
   }], {
     margin: { t: 10, r: 10 }, xaxis: { title: 'Density difference (CEN − arm, cuts/kb)', zeroline: true, zerolinecolor: '#2b6cb0', zerolinewidth: 2 },
     yaxis: { title: 'Homogeneity difference (CEN − arm)' },
   }, PCFG);
 }
 
-// cut-density track (any bin size, per chromosome) --------------------------
+// cut-density track — genome-browser style: cap displayed points to the screen
+// and use the selected fine bin only within the zoomed-in window. This keeps
+// 200 bp resolution fluid (plotting 160k points at once would freeze Plotly).
+const TRACK_MAXPTS = 4000;
+let trackWired = false, trackRedraw = false;
+const lowerBound = (arr, v) => { let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] < v) lo = m + 1; else hi = m; } return lo; };
+
 function renderTrack(d) {
+  drawTrack(d);
+  if (!trackWired) {
+    trackWired = true;
+    $('track').on('plotly_relayout', (ev) => {
+      if (trackRedraw) return;
+      if (ev['xaxis.autorange']) { drawTrack(d); return; }
+      let x0 = ev['xaxis.range[0]'], x1 = ev['xaxis.range[1]'];
+      if (x0 === undefined && ev['xaxis.range']) { [x0, x1] = ev['xaxis.range']; }
+      if (x0 === undefined) return;
+      drawTrack(d, x0 * 1e6, x1 * 1e6);   // ranges are in Mb on the axis
+    });
+  }
+}
+function drawTrack(d, x0bp, x1bp) {
   const chrom = $('trackChrom').value, enz = $('trackEnz').value, bin = +$('trackBin').value;
   const pos = d.positions[chrom] && d.positions[chrom][enz]; if (!pos) return;
   const len = d.chromMeta.find(c => c.name === chrom).len;
-  const nb = Math.max(1, Math.ceil(len / bin)); const counts = new Float64Array(nb);
-  for (let i = 0; i < pos.length; i++) counts[Math.floor(pos[i] / bin)]++;
-  const x = [], y = [], perKb = bin / 1000;
-  for (let i = 0; i < nb; i++) { x.push(i * bin / 1e6); y.push(counts[i] / perKb); }
+  let x0 = x0bp == null ? 0 : Math.max(0, x0bp), x1 = x1bp == null ? len : Math.min(len, x1bp);
+  if (!(x1 > x0)) { x0 = 0; x1 = len; }
+  const range = x1 - x0;
+  const dispBin = Math.max(bin, Math.ceil(range / TRACK_MAXPTS)); // never plot >~4000 points
+  const nb = Math.max(1, Math.ceil(range / dispBin));
+  const counts = new Float64Array(nb), perKb = dispBin / 1000;
+  for (let i = lowerBound(pos, x0); i < pos.length && pos[i] < x1; i++) counts[Math.min(nb - 1, Math.floor((pos[i] - x0) / dispBin))]++;
+  const x = new Array(nb), y = new Array(nb);
+  for (let i = 0; i < nb; i++) { x[i] = (x0 + i * dispBin) / 1e6; y[i] = counts[i] / perKb; }
   const shapes = (d.ivByChrom.get(chrom) || []).map(([a, b]) => ({ type: 'rect', xref: 'x', yref: 'paper', x0: a / 1e6, x1: b / 1e6, y0: 0, y1: 1, fillcolor: 'rgba(197,48,48,.12)', line: { width: 0 } }));
-  Plotly.newPlot('track', [{ x, y, type: 'scattergl', mode: 'lines', line: { width: 1, color: '#2b6cb0' }, fill: 'tozeroy', name: enz }], {
-    margin: { t: 10, r: 10 }, xaxis: { title: `${chrom} position (Mb)` }, yaxis: { title: 'cut density (cuts/kb)' },
+  const eff = dispBin > bin ? `  ·  showing ${dispBin >= 1000 ? (dispBin/1000).toFixed(1) + ' kb' : dispBin + ' bp'} bins (zoom in for ${bin} bp)` : '';
+  trackRedraw = true;
+  Plotly.react('track', [{ x, y, type: 'scattergl', mode: 'lines', line: { width: 1, color: '#2b6cb0' }, fill: 'tozeroy', name: enz }], {
+    margin: { t: 10, r: 10 }, xaxis: { title: `${chrom} position (Mb)${eff}`, range: [x0 / 1e6, x1 / 1e6] },
+    yaxis: { title: 'cut density (cuts/kb)', rangemode: 'tozero' },
     shapes, annotations: shapes.length ? [{ x: (shapes[0].x0 + shapes[0].x1) / 2, y: 1, yref: 'paper', text: 'centromere', showarrow: false, font: { color: '#c53030', size: 11 } }] : [],
-  }, PCFG);
+  }, PCFG).then(() => { trackRedraw = false; });
 }
 
 // monomer-length histogram (genome-wide or per chromosome) ------------------

@@ -61,7 +61,7 @@
       <h2>Balance map</h2>
       <div class="selrow"><label>Region <select id="scChrom"></select></label></div>
       <p class="hint"><b>x = 0</b> means equal cutting in centromere &amp; arms. Left = over-cuts centromere; right = under-cuts it.
-      Marker colour = density difference. Hover for the enzyme.</p>
+      Marker colour = overall cut density (cuts/kb, log scale) — a third dimension beyond the axes. Hover for the enzyme.</p>
       <div id="scatter" class="plot"></div>
     </div>
 
@@ -75,6 +75,7 @@
           <option value="1000" selected>1 kb</option><option value="2000">2 kb</option>
           <option value="5000">5 kb</option><option value="10000">10 kb</option></select></label>
       </div>
+      <p class="hint">The overview auto-coarsens for speed; the chosen bin size is the finest used — <b>zoom in</b> (drag or box-select) to reach it. Double-click to reset.</p>
       <div id="track" class="plot"></div>
     </div>
 
@@ -95,6 +96,6 @@
   Enzyme set: NEB-supplied enzymes from REBASE (via Biopython). In-silico spacing correlates with experimental monomer length at R²≈0.86.</p>
 </footer>
 
-<script src="app.js?v=4"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>
