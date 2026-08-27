@@ -1,6 +1,6 @@
 # Pore-C Enzyme Explorer (web app)
 
-> **A joint contribution by [Jacob Gonzalez Isa](https://github.com/jacgonisa)** (jg2070@cam.ac.uk), **[Katie Jenike](https://github.com/kjenike)** (kj436@cam.ac.uk) — who designed the cut-density track — **and Hanwen Cao** (hc617@cam.ac.uk).
+> **A joint contribution by [Jacob Gonzalez Isa](https://github.com/jacgonisa)** (jg2070@cam.ac.uk), **[Katie Jenike](https://github.com/kjenike)** (kj436@cam.ac.uk), **and Hanwen Cao** (hc617@cam.ac.uk) — with special thanks to Katie Jenike for the design of the cut-density track.
 
 A zero-backend browser app for **exploring** restriction-enzyme choice for
 Pore-C. Drop in a **genome FASTA** + a **centromere BED** and inspect, for any

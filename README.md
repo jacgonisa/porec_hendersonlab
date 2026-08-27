@@ -1,6 +1,6 @@
 # PoreC Analysis Pipeline
 
-> **A joint contribution by [Jacob Gonzalez Isa](https://github.com/jacgonisa)** (jg2070@cam.ac.uk), **[Katie Jenike](https://github.com/kjenike)** (kj436@cam.ac.uk) — who designed the cut-density track — **and Hanwen Cao** (hc617@cam.ac.uk).
+> **A joint contribution by [Jacob Gonzalez Isa](https://github.com/jacgonisa)** (jg2070@cam.ac.uk), **[Katie Jenike](https://github.com/kjenike)** (kj436@cam.ac.uk), **and Hanwen Cao** (hc617@cam.ac.uk) — with special thanks to Katie Jenike for the design of the cut-density track.
 
 A 3C genomics project to understand centromeres better through Hi-C and Pore-C chromatin conformation capture analysis at Henderson Lab.
 
