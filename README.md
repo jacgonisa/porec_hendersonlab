@@ -1,5 +1,7 @@
 # PoreC Analysis Pipeline
 
+> **Acknowledgements:** with thanks to **[Katie Jenike](https://github.com/kjenike)** (kj436@cam.ac.uk) — who designed the cut-density track — and **Hanwen Cao** (hc617@cam.ac.uk).
+
 A 3C genomics project to understand centromeres better through Hi-C and Pore-C chromatin conformation capture analysis at Henderson Lab.
 
 ## Overview

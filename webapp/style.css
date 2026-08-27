@@ -5,6 +5,7 @@ header, main, footer { max-width:960px; margin:0 auto; padding:0 20px; }
 header { padding-top:28px; }
 h1 { font-size:26px; margin:0 0 6px; }
 .sub { color:var(--mut); margin:0 0 8px; max-width:70ch; }
+.ack { font-size:13px; color:var(--ink); background:#eef4fb; border-left:3px solid var(--acc); padding:8px 12px; border-radius:6px; margin:0 0 8px; max-width:70ch; }
 a { color:var(--acc); }
 .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin:16px 0; }
 h2 { font-size:18px; margin:0 0 12px; }

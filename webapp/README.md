@@ -1,5 +1,7 @@
 # Pore-C Enzyme Explorer (web app)
 
+> **Acknowledgements:** **[Katie Jenike](https://github.com/kjenike)** (kj436@cam.ac.uk), who designed the cut-density track, and **Hanwen Cao** (hc617@cam.ac.uk).
+
 A zero-backend browser app for **exploring** restriction-enzyme choice for
 Pore-C. Drop in a **genome FASTA** + a **centromere BED** and inspect, for any
 NEB enzyme, its cut density, predicted fragment (monomer) lengths, and
