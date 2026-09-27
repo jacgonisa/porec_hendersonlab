@@ -100,26 +100,56 @@
 <h2>5 · Detection by BrdU pulse length</h2>
 <p>The register shift is a <b>1-D statistic</b> (mean signed offset), not a 2-D map — so it needs only <b>~56 oriented trans-sister contacts</b> for 80% power (assuming δ = 30 kb, spread σ = 80 kb). Longer BrdU pulses label more cells and cut the read requirement:</p>
 <table>
-  <thead><tr><th>BrdU pulse</th><th>oriented trans / read</th><th>reads for 80% power</th><th>flow cells (7 M)</th></tr></thead>
+  <thead><tr><th>BrdU pulse</th><th>oriented trans / read</th><th>reads for 80% power</th><th>flow cells (50 Gb)</th></tr></thead>
   <tbody>
-  <tr><td>ideal G2 (ceiling)</td><td>5.0e-3</td><td>11,000</td><td>0.002</td></tr>
-  <tr><td>1 h pulse</td><td>1.9e-4</td><td>301,000</td><td>0.043</td></tr>
-  <tr><td>3 h pulse</td><td>6.7e-4</td><td class="best">83,000</td><td class="best">0.012</td></tr>
-  <tr><td>6 h pulse</td><td>1.2e-3</td><td>46,000</td><td>0.007</td></tr>
+  <tr><td>ideal G2 (ceiling)</td><td>5.0e-3</td><td>11,000</td><td>0.001</td></tr>
+  <tr><td>1 h pulse</td><td>1.9e-4</td><td>301,000</td><td>0.017</td></tr>
+  <tr><td>3 h pulse</td><td>6.7e-4</td><td class="best">83,000</td><td class="best">0.005</td></tr>
+  <tr><td>6 h pulse</td><td>1.2e-3</td><td>46,000</td><td>0.003</td></tr>
   </tbody>
 </table>
+<div class="callout key"><b>Depth is not the bottleneck in Arabidopsis.</b> A flow cell yields ~50 Gb; the genome is only 135 Mb → <b>~370× coverage per flow cell</b> (~18 M Pore-C reads at ~2.7 kb/read). So detecting the register shift at a 3 h pulse costs ≈0.005 of a flow cell — you are limited by biology and confounds, not sequencing.</div>
 <figure>
   <img src="contactmap_sister.png" alt="sister-resolved contact maps and reads-to-detect by pulse length">
   <figcaption><b>Fig 5.</b> Top: ground-truth vs strand-oriented recovered trans-sister maps (3 h, 6 h pulse). Bottom-left: strand-oriented offset recovers +δ; bulk is symmetric. Bottom-middle: reads-to-detect vs shift size and pulse. Bottom-right: recovered stagger matches truth at every pulse.</figcaption>
 </figure>
-<div class="callout"><b>Pulse recommendation.</b> 1 h → 3 h is the big win (~6× fewer reads, because a 1 h pulse is shorter than S so co-labelling of both loci is rare). 3 h → 6 h is only ~1.8× more and 6 h starts accruing post-mitotic G1-daughter contamination. <b>3 h is the sweet spot</b> — the whole asymmetry measurement costs ≈0.01 of a PromethION flow cell.</div>
+<div class="callout"><b>Pulse recommendation.</b> 1 h → 3 h is the big win (~6× fewer reads, because a 1 h pulse is shorter than S so co-labelling of both loci is rare). 3 h → 6 h is only ~1.8× more and 6 h starts accruing post-mitotic G1-daughter contamination. <b>3 h is the sweet spot</b> — the whole asymmetry measurement costs ≈0.005 of a flow cell.</div>
 
-<h2>6 · Conclusions</h2>
+<h2>6 · KEE / chromocenter interactions: intra- vs inter-sister</h2>
+<p>Beyond the asymmetry, the more Arabidopsis-native use is to decompose your prominent hubs — the <b>KNOT / KEEs</b> and the <b>pericentromere chromocenter</b> — into cis-sister (within one chromatid), trans-sister (between sisters), and inter-homolog contacts. Is a KEE–KEE (or chromocenter) interaction intra-sister, inter-sister, or both? And is pericentromere clustering driven by <b>sister cohesion</b> or by <b>sister-agnostic bulk aggregation</b>?</p>
+<figure>
+  <img src="pilot_kee_chromocenter.png" alt="KEE/chromocenter sister decomposition, inter-homolog bias, F1 rescue, multi-way cost">
+  <figcaption><b>Fig 6.</b> Left: recovered trans-sister fraction vs truth — KEEs are unbiased in inbred Col-0, but at the pericentromere inter-homolog contacts inflate "bulk" (true 0.15) to ~0.30. Middle: reads to distinguish sister-cohesion from bulk vs how enriched your hub is (p_hub). Right: a 3-way sister-spanning hub costs one extra BrdU coin-flip (~3.6×).</figcaption>
+</figure>
+<table>
+  <thead><tr><th>region</th><th>scenario (true)</th><th>inbred Col-0</th><th>Col×Ler F1</th></tr></thead>
+  <tbody>
+  <tr><td>KEE (arm)</td><td>cohesion (0.50)</td><td>0.50</td><td>0.50</td></tr>
+  <tr><td>KEE (arm)</td><td>bulk (0.15)</td><td class="best">0.17</td><td>0.16</td></tr>
+  <tr><td>pericentromere</td><td>cohesion (0.50)</td><td>0.51</td><td>0.51</td></tr>
+  <tr><td>pericentromere</td><td>bulk (0.15)</td><td>0.30 ⚠</td><td>0.29 ⚠</td></tr>
+  </tbody>
+</table>
+<div class="callout warn"><b>The chromocenter trap.</b> At the pericentromere, inter-homolog contacts (~40%) inflate the inbred trans-sister estimate — <b>bulk clustering (true 0.15) reads as 0.30</b>, which can be mistaken for partial sister cohesion. And <b>F1 barely rescues it</b>: pericentromeric reads can't be haplotagged (low SNP density / repeats → only ~6% of inter-homolog pairs identified). So treat the raw inbred pericentromere trans-fraction with suspicion and subtract an inter-homolog model. <b>KEEs (euchromatic, low inter-homolog) are the clean first target</b> — answerable in inbred Col-0 today.</div>
+<p><b>Reads.</b> Only <b>~30 (KEE) to ~80 (pericentromere)</b> sister-resolved contacts are needed to distinguish cohesion from bulk (≈384 to pin the fraction to ±0.05). Total reads = contacts / (p_hub × ε), with ε ≈ 0.03; plug in your measured hub contact fraction p_hub:</p>
+<table>
+  <thead><tr><th>p_hub (your maps)</th><th>KEE reads</th><th>KEE flow cells</th><th>pericentromere reads</th><th>peri flow cells</th></tr></thead>
+  <tbody>
+  <tr><td>1e-3 (strong hub)</td><td>1.1e6</td><td class="best">0.06</td><td>2.4e6</td><td>0.13</td></tr>
+  <tr><td>1e-4</td><td>1.1e7</td><td>0.6</td><td>2.4e7</td><td>1.3</td></tr>
+  <tr><td>1e-5 (weak)</td><td>1.1e8</td><td>6</td><td>2.4e8</td><td>13</td></tr>
+  </tbody>
+</table>
+<p>So for a strong KEE/chromocenter interaction it's a fraction of a flow cell; read your real <code>p_hub</code> off the existing AlwI/BfaI maps to fix the number. <b>Multi-way</b> (a single molecule touching a hub across both sisters — impossible for Hi-C) costs ~3.6× more.</p>
+
+<h2>7 · Conclusions</h2>
 <ul>
   <li><b>Feasible.</b> Detecting the replicated-chromosome register shift needs tens of thousands of reads even asynchronous — a fraction of one flow cell.</li>
   <li><b>Strand resolution is essential and sufficient.</b> The asymmetry is registered to parental strand, so it survives population averaging once you orient by strand; bulk methods cannot recover it.</li>
   <li><b>Read the signed offset, not a full map.</b> The 1-D collapse is ~10³–10⁴× cheaper than a sister-resolved 2-D contact map.</li>
   <li><b>3 h BrdU pulse, no chase.</b> Best trade of yield vs. G1-daughter / double-labelling confounds.</li>
+  <li><b>KEEs first, chromocenter with care.</b> KEE intra- vs inter-sister engagement is answerable in inbred Col-0 now; the pericentromere sister question needs an inter-homolog correction (F1 alone fails in the repeats).</li>
+  <li><b>Sequencing is not the limit.</b> ~370× depth per flow cell on this 135 Mb genome — the constraints are labelling efficiency, inter-homolog contamination, and repeat mappability.</li>
 </ul>
 
 <div class="callout warn">
@@ -134,7 +164,7 @@
 <footer>
   Generated by the <code>spcsim</code> prototype: <code>quick_mc.py</code> (cell/strand/label engine),
   <code>pilot_chr1_sister.py</code> (Fig 3), <code>contactmap_sister.py</code> (Fig 5),
-  <code>animate_schematics.py</code> (Figs 1,2,4). Reference:
+  <code>pilot_kee_chromocenter.py</code> (Fig 6), <code>animate_schematics.py</code> (Figs 1,2,4). Reference:
   <a href="https://www.biorxiv.org/content/10.1101/2025.07.09.663929v1" target="_blank" rel="noopener">Conformational asymmetry of replicated human chromosomes</a>, Science 2025.
 </footer>
 </div>

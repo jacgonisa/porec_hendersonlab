@@ -31,6 +31,7 @@ SIGMA = 8                    # trans-contact spread (bins) = 80 kb
 # BrdU pulse sweep (HU dropped). ideal = theoretical ceiling (fully-labelled G2).
 POPS = {'ideal G2 (ceiling)': dict(ideal=True), '1 h pulse': dict(P=1.0),
         '3 h pulse': dict(P=3.0), '6 h pulse': dict(P=6.0)}
+FLOWCELL = 18_000_000     # reads per ~50 Gb flow cell (~2.7 kb/read; Arabidopsis 135 Mb -> ~370x depth)
 MAP_PANELS = ['3 h pulse', '6 h pulse']
 OPP = {'W': 'C', 'C': 'W'}
 
@@ -138,15 +139,15 @@ def main():
     with open('contactmap_sister_readsneeded.csv', 'w', newline='') as f:
         w = csv.writer(f)
         w.writerow(['population', 'oriented_trans_per_read_genome', 'contacts_for_80pct_power',
-                    'reads_for_80pct_power', 'flowcells_at_7M'])
+                    'reads_for_80pct_power', 'flowcells_50Gb'])
         for pop, r in results.items():
             w.writerow([pop, f"{r['y_genome']:.3e}", f"{CONTACTS_80:.0f}",
-                        f"{r['reads_needed']:.3e}", f"{r['reads_needed']/7e6:.3f}"])
+                        f"{r['reads_needed']:.3e}", f"{r['reads_needed']/FLOWCELL:.3f}"])
     print("\n=== reads to DETECT the register shift (mean signed offset != 0, 80% power) ===")
     print(f"delta={DELTA*10} kb, sigma={SIGMA*10} kb  ->  {CONTACTS_80:.0f} oriented trans contacts needed")
-    print(f"{'BrdU pulse':20s} {'oriented trans/read':>19s} {'reads needed':>14s} {'flow cells (7M)':>15s}")
+    print(f"{'BrdU pulse':20s} {'oriented trans/read':>19s} {'reads needed':>14s} {'flow cells(50Gb)':>16s}")
     for pop, r in results.items():
-        print(f"{pop:20s} {r['y_genome']:>19.2e} {r['reads_needed']:>14.2e} {r['reads_needed']/7e6:>15.3f}")
+        print(f"{pop:20s} {r['y_genome']:>19.2e} {r['reads_needed']:>14.2e} {r['reads_needed']/FLOWCELL:>16.3f}")
 
     try:
         import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
@@ -181,7 +182,7 @@ def main():
             nr = [(1.96 + 0.84) ** 2 * (SIGMA / d) ** 2 / yg for d in deltas]
             a.plot(deltas * 10, nr, 'o-', label=pop)
         a.set_yscale('log'); a.set_xlabel('true register shift delta (kb)'); a.set_ylabel('reads for 80% power')
-        a.axhline(7e6, color='k', ls=':', lw=0.8); a.text(deltas[-1]*10, 7e6, ' 1 flow cell', fontsize=7, va='bottom', ha='right')
+        a.axhline(FLOWCELL, color='k', ls=':', lw=0.8); a.text(deltas[-1]*10, FLOWCELL, ' 1 flow cell (50 Gb)', fontsize=7, va='bottom', ha='right')
         a.set_title('Reads to detect the shift vs its size & pulse', fontsize=10); a.legend(fontsize=7)
 
         a = ax[1, 2]
