@@ -1,0 +1,5 @@
+population,oriented_trans_per_read_genome,contacts_for_80pct_power,reads_for_80pct_power,flowcells_at_7M
+ideal G2 (ceiling),5.008e-03,56,1.113e+04,0.002
+1 h pulse,1.854e-04,56,3.007e+05,0.043
+3 h pulse,6.722e-04,56,8.294e+04,0.012
+6 h pulse,1.202e-03,56,4.638e+04,0.007

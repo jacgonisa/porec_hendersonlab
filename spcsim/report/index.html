@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sister-Pore-C in asynchronous Arabidopsis — feasibility report</title>
+<style>
+  :root{--bg:#0e1117;--panel:#161b22;--line:#30363d;--fg:#e6edf3;--mut:#9da7b3;
+        --blue:#58a6ff;--teal:#2dd4bf;--yel:#f2cc60;--red:#f85149;--green:#3fb950;--purp:#bc8cff;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,Segoe UI,Roboto,sans-serif;}
+  .wrap{max-width:900px;margin:0 auto;padding:0 22px 80px}
+  header{padding:48px 0 8px}
+  h1{font-size:30px;line-height:1.2;margin:0 0 10px;font-weight:700}
+  h2{font-size:22px;margin:46px 0 12px;color:#fff;border-bottom:1px solid var(--line);padding-bottom:8px}
+  h3{font-size:17px;margin:26px 0 6px;color:var(--yel)}
+  p{color:#d6dee7}
+  .byline{color:var(--mut);font-size:14px;margin:0 0 8px}
+  .lead{font-size:18px;color:#cdd6df}
+  a{color:var(--blue)}
+  code{background:#12161c;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.9em}
+  figure{margin:22px 0;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  figure img{width:100%;border-radius:8px;display:block}
+  figcaption{color:var(--mut);font-size:13.5px;margin-top:10px}
+  .callout{background:#10261c;border:1px solid #1d573b;border-left:4px solid var(--green);
+           border-radius:10px;padding:12px 16px;margin:20px 0}
+  .callout.warn{background:#2a2011;border-color:#5b451a;border-left-color:var(--yel)}
+  .callout.key{background:#0f2233;border-color:#1c4a6e;border-left-color:var(--blue)}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.5px;background:var(--panel);border-radius:10px;overflow:hidden}
+  th,td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left}
+  thead th{background:#1b222b;color:#fff}
+  tr td.best{color:var(--green);font-weight:600}
+  .tag{display:inline-block;font-size:12px;color:var(--mut);border:1px solid var(--line);border-radius:20px;padding:2px 10px;margin-right:6px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+  footer{color:var(--mut);font-size:13px;border-top:1px solid var(--line);margin-top:50px;padding-top:18px}
+  em.hl{color:var(--yel);font-style:normal}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <span class="tag">feasibility report</span><span class="tag">spcsim · prototype</span>
+  <h1>Can asynchronous BrdU Pore-C resolve sister chromatids —<br>and detect the conformational asymmetry of replicated chromosomes?</h1>
+  <p class="byline">Jacob González Isa · Henderson Lab, University of Cambridge · Monte-Carlo back-of-envelope (not the final tool)</p>
+  <p class="lead">Short answer: <em class="hl">yes</em>. The method is accurate whenever it fires; asynchrony costs <em class="hl">read depth, not correctness</em>. The replicated-chromosome <b>register shift</b> is registered to parental-strand orientation — exactly what the BrdU strand read reveals — so it is detectable from a fraction of one flow cell, while bulk Hi-C/Pore-C cannot see it at all.</p>
+</header>
+
+<h2>1 · The idea: BrdU turns strand into sister identity</h2>
+<p>After one S phase in BrdU, each sister chromatid carries BrdU on a <b>defined strand</b>: the sister that inherited the parental Watson strand (call it <b>pW</b>) has its nascent Crick strand labelled; <b>pC</b> is the mirror. Nanopore reads one random strand per monomer, so a BrdU+ monomer read on strand X must come from the sister with BrdU on X. Chromatid identity is continuous along the chromosome (no sister-chromatid exchange).</p>
+<figure>
+  <img src="anim_labelling.gif" alt="replication and BrdU labelling of the two sisters">
+  <figcaption><b>Fig 1.</b> One S phase in BrdU produces two sisters labelled on opposite strands (pW: BrdU on C; pC: BrdU on W). This strand→sister map is the whole basis of the method.</figcaption>
+</figure>
+
+<h2>2 · Reading a concatemer → a sister call</h2>
+<p>A Pore-C read is a concatemer of several monomers from one nucleus. For any two monomers on the same chromosome: <b>both BrdU+ and read on the same strand → cis-sister</b> (same chromatid); <b>both BrdU+ on opposite strands → trans-sister</b> (between the two sisters). If a monomer is not BrdU+, it can't be assigned (unless rescued by proximity to a labelled one, ≤100 kb).</p>
+<figure>
+  <img src="anim_read.gif" alt="reading a concatemer and classifying a pair as cis- or trans-sister">
+  <figcaption><b>Fig 2.</b> Strand + label of two monomers yields the sister call. The failure mode in asynchronous tissue is simply that too few monomers are BrdU+, not that the calls are wrong.</figcaption>
+</figure>
+
+<h2>3 · The cost of asynchrony (pilot: one Chr1 trans-sister contact)</h2>
+<p>In root tips most cells did not replicate during the pulse, so a planted trans-sister contact only <em class="hl">exists as a resolvable sister pair</em> in a minority of cells. At a Chr1 pericentromere locus:</p>
+<table>
+  <thead><tr><th>quantity</th><th>ideal G2 (sync)</th><th>async 3 h pulse</th></tr></thead>
+  <tbody>
+  <tr><td>P(contact is a resolvable sister pair)</td><td>1.00</td><td>0.19</td></tr>
+  <tr><td>capture efficiency ε (≤100 kb, with rescue)</td><td>0.75</td><td>0.10</td></tr>
+  <tr><td>capture efficiency ε (&gt;100 kb, no rescue)</td><td>0.25</td><td>0.033</td></tr>
+  <tr><td>call purity (correct / all trans calls)</td><td>1.00</td><td>&gt;0.99</td></tr>
+  </tbody>
+</table>
+<div class="callout"><b>Accuracy is not the problem.</b> Whenever a call is made it is &gt;99% correct, with ~0.15% G1-daughter contamination. Asynchrony costs <b>~7× more reads</b> than perfect synchrony (driven mostly by only ~19% of cells being in the right state), not accuracy.</div>
+<figure>
+  <img src="pilot_chr1_sister.png" alt="sister-resolution efficiency and reads-to-detect vs separation">
+  <figcaption><b>Fig 3.</b> Left: sister-resolution efficiency ε vs A–B separation (rescue keeps ≤100 kb high). Right: reads to accumulate 10 informative trans-sister pairs at a given separation, genome-wide on Chr1.</figcaption>
+</figure>
+<p>Reads to accumulate 10 informative trans-sister pairs at a separation, <b>anywhere on Chr1</b> (the practical, aggregated readout):</p>
+<table>
+  <thead><tr><th>separation</th><th>ideal</th><th>async 3 h</th></tr></thead>
+  <tbody>
+  <tr><td>10 kb</td><td>330</td><td class="best">2,400</td></tr>
+  <tr><td>100 kb</td><td>1,200</td><td class="best">8,700</td></tr>
+  <tr><td>500 kb</td><td>13,000</td><td>98,000</td></tr>
+  <tr><td>2 Mb</td><td>40,000</td><td>302,000</td></tr>
+  </tbody>
+</table>
+<div class="callout warn"><b>You will not see individual trans-sister pixels.</b> A single specific A–B pair needs millions–hundreds of millions of reads. The observable is the <b>aggregated / binned trans-sister signal</b> (by distance, by region) — that is cheap even asynchronous.</div>
+
+<h2>4 · The target: conformational asymmetry of replicated chromosomes</h2>
+<p>The Gerlich lab (<a href="https://www.biorxiv.org/content/10.1101/2025.07.09.663929v1" target="_blank" rel="noopener">Science 2025, biorxiv 2025.07.09.663929</a>) showed with sister-chromatid-sensitive Hi-C that sisters are consistently <b>staggered by a register shift δ along the 5′→3′ direction of the inherited strand</b> — trans-sister contacts peak at <code>j − i = +δ</code>, not at 0, explained by directionally-misaligned cohesive cohesin.</p>
+<div class="callout key"><b>Why sister-Pore-C is the right tool.</b> The shift is <b>registered to parental-strand orientation</b>. The BrdU strand read tells you which sister each labelled monomer is on, so every trans-sister contact can be <b>signed</b> along that axis. Bulk Hi-C/Pore-C can't orient the pair, so +δ and −δ superimpose into a symmetric diagonal — <b>the asymmetry is invisible without strand resolution.</b></div>
+<figure>
+  <img src="anim_asymmetry.gif" alt="staggered sisters and accumulating signed-offset histogram">
+  <figcaption><b>Fig 4.</b> Strand-oriented trans-sister contacts (blue) build a peak at +δ as reads accumulate; the running mean lands on the true shift. Bulk (grey), with no strand information, stays symmetric at 0. The asymmetry lives entirely in the <em>signed</em> offset.</figcaption>
+</figure>
+
+<h2>5 · Detection by BrdU pulse length</h2>
+<p>The register shift is a <b>1-D statistic</b> (mean signed offset), not a 2-D map — so it needs only <b>~56 oriented trans-sister contacts</b> for 80% power (assuming δ = 30 kb, spread σ = 80 kb). Longer BrdU pulses label more cells and cut the read requirement:</p>
+<table>
+  <thead><tr><th>BrdU pulse</th><th>oriented trans / read</th><th>reads for 80% power</th><th>flow cells (7 M)</th></tr></thead>
+  <tbody>
+  <tr><td>ideal G2 (ceiling)</td><td>5.0e-3</td><td>11,000</td><td>0.002</td></tr>
+  <tr><td>1 h pulse</td><td>1.9e-4</td><td>301,000</td><td>0.043</td></tr>
+  <tr><td>3 h pulse</td><td>6.7e-4</td><td class="best">83,000</td><td class="best">0.012</td></tr>
+  <tr><td>6 h pulse</td><td>1.2e-3</td><td>46,000</td><td>0.007</td></tr>
+  </tbody>
+</table>
+<figure>
+  <img src="contactmap_sister.png" alt="sister-resolved contact maps and reads-to-detect by pulse length">
+  <figcaption><b>Fig 5.</b> Top: ground-truth vs strand-oriented recovered trans-sister maps (3 h, 6 h pulse). Bottom-left: strand-oriented offset recovers +δ; bulk is symmetric. Bottom-middle: reads-to-detect vs shift size and pulse. Bottom-right: recovered stagger matches truth at every pulse.</figcaption>
+</figure>
+<div class="callout"><b>Pulse recommendation.</b> 1 h → 3 h is the big win (~6× fewer reads, because a 1 h pulse is shorter than S so co-labelling of both loci is rare). 3 h → 6 h is only ~1.8× more and 6 h starts accruing post-mitotic G1-daughter contamination. <b>3 h is the sweet spot</b> — the whole asymmetry measurement costs ≈0.01 of a PromethION flow cell.</div>
+
+<h2>6 · Conclusions</h2>
+<ul>
+  <li><b>Feasible.</b> Detecting the replicated-chromosome register shift needs tens of thousands of reads even asynchronous — a fraction of one flow cell.</li>
+  <li><b>Strand resolution is essential and sufficient.</b> The asymmetry is registered to parental strand, so it survives population averaging once you orient by strand; bulk methods cannot recover it.</li>
+  <li><b>Read the signed offset, not a full map.</b> The 1-D collapse is ~10³–10⁴× cheaper than a sister-resolved 2-D contact map.</li>
+  <li><b>3 h BrdU pulse, no chase.</b> Best trade of yield vs. G1-daughter / double-labelling confounds.</li>
+</ul>
+
+<div class="callout warn">
+<b>Caveats — this is a back-of-envelope.</b>
+<ul style="margin:8px 0 0">
+  <li>δ and σ are assumed; reads scale as <b>(σ/δ)²</b> — plug in the paper's real magnitudes (if δ ≈ 10 kb it is ~9× more reads, still &lt; 0.1 flow cell at 3 h).</li>
+  <li>Per-monomer BrdU detection was saturated here (many T per monomer); with low BrdU or short monomers, use the real FORT-A per-T sensitivity and scale reads up.</li>
+  <li>Phenomenological contact kernel + TAIR10 coordinates. Absolute read counts are order-of-magnitude; <b>the ratios (sync vs async, pulse vs pulse) are robust.</b> Next: swap in real Chr1 P(s) from the AlwI/BfaI <code>.pairs</code> and the Col-CC assembly.</li>
+</ul>
+</div>
+
+<footer>
+  Generated by the <code>spcsim</code> prototype: <code>quick_mc.py</code> (cell/strand/label engine),
+  <code>pilot_chr1_sister.py</code> (Fig 3), <code>contactmap_sister.py</code> (Fig 5),
+  <code>animate_schematics.py</code> (Figs 1,2,4). Reference:
+  <a href="https://www.biorxiv.org/content/10.1101/2025.07.09.663929v1" target="_blank" rel="noopener">Conformational asymmetry of replicated human chromosomes</a>, Science 2025.
+</footer>
+</div>
+</body>
+</html>
