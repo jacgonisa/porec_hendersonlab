@@ -130,7 +130,9 @@
   <tr><td>pericentromere</td><td>bulk (0.15)</td><td>0.30 ⚠</td><td>0.29 ⚠</td></tr>
   </tbody>
 </table>
-<div class="callout warn"><b>The chromocenter trap.</b> At the pericentromere, inter-homolog contacts (~40%) inflate the inbred trans-sister estimate — <b>bulk clustering (true 0.15) reads as 0.30</b>, which can be mistaken for partial sister cohesion. And <b>F1 barely rescues it</b>: pericentromeric reads can't be haplotagged (low SNP density / repeats → only ~6% of inter-homolog pairs identified). So treat the raw inbred pericentromere trans-fraction with suspicion and subtract an inter-homolog model. <b>KEEs (euchromatic, low inter-homolog) are the clean first target</b> — answerable in inbred Col-0 today.</div>
+<div class="callout warn"><b>The chromocenter trap.</b> At the pericentromere, inter-homolog contacts (~40%) inflate the inbred trans-sister estimate — <b>bulk clustering (true 0.15) reads as 0.30</b>, which can be mistaken for partial sister cohesion. <b>KEEs (euchromatic, low inter-homolog) are the clean first target</b> — answerable in inbred Col-0 today.</div>
+<div class="callout"><b>Inbred Col-0 only — no F1.</b> The F1 column above is just to show what haplotagging <em>would</em> buy: at the pericentromere, almost nothing (repeats block haplotagging → only ~6% of inter-homolog pairs identified, 0.29 vs the true 0.15). So staying Col homozygous costs little; the plan is inbred throughout, and the inter-homolog contribution is <b>modelled and subtracted</b> (its size is estimable from the inter-homolog contact rate in your own maps), not removed by crossing to Ler.</div>
+<div class="callout key"><b>Real p_hub from your AlwI / BfaI maps.</b> Measured at 100 kb: intra-chromosomal pericentromere contacts are <b>~16% of all contacts</b> (AlwI 0.167, BfaI 0.158), and inter-chromosomal chromocenter clustering is ~0.1–0.7% (AlwI 6.5e-3, BfaI 1.2e-3). With ε ≈ 0.03, distinguishing sister-cohesion from bulk at the pericentromere needs only <b>~17,000 reads (~0.001 flow cell)</b>; the inter-chromosomal chromocenter signal needs ~0.02 (AlwI) to ~0.12 (BfaI) of a flow cell. <b>Depth is a non-issue — the limits are the inter-homolog confound and CEN180 mappability.</b></div>
 <p><b>Reads.</b> Only <b>~30 (KEE) to ~80 (pericentromere)</b> sister-resolved contacts are needed to distinguish cohesion from bulk (≈384 to pin the fraction to ±0.05). Total reads = contacts / (p_hub × ε), with ε ≈ 0.03; plug in your measured hub contact fraction p_hub:</p>
 <table>
   <thead><tr><th>p_hub (your maps)</th><th>KEE reads</th><th>KEE flow cells</th><th>pericentromere reads</th><th>peri flow cells</th></tr></thead>
@@ -142,15 +144,15 @@
 </table>
 <p>So for a strong KEE/chromocenter interaction it's a fraction of a flow cell; read your real <code>p_hub</code> off the existing AlwI/BfaI maps to fix the number. <b>Multi-way</b> (a single molecule touching a hub across both sisters — impossible for Hi-C) costs ~3.6× more.</p>
 
-<h2>7 · What the simulated maps look like</h2>
-<p>To make it concrete, here is a simulated bulk Pore-C map of the whole genome and the sister decomposition of Chr1 (phenomenological model; KEE positions and coordinates illustrative).</p>
+<h2>7 · The real maps (AlwI &amp; BfaI), and the sister layer</h2>
+<p>Here are your <b>actual WT Pore-C maps</b> (from the <code>.mcool</code> files via cooler), then the sister decomposition that sister-Pore-C would peel off them.</p>
 <figure>
-  <img src="contactmap_genome.png" alt="simulated genome-wide bulk Pore-C contact map of Arabidopsis">
-  <figcaption><b>Fig 7.</b> Simulated bulk Pore-C map (5 chromosomes, 200 kb bins): per-chromosome distance decay along the diagonal, dark <b>pericentromere heterochromatin blocks</b>, the off-diagonal <b>chromocenter grid</b> (pericentromeres of different chromosomes clustering), and <b>KEE/KNOT dots</b> (teal ▾). This is the signal you already see — sister resolution asks which of these contacts are within vs between sisters.</figcaption>
+  <img src="real_contactmap_AlwI_BfaI.png" alt="real AlwI and BfaI Pore-C contact maps of Arabidopsis">
+  <figcaption><b>Fig 7 (real data).</b> Genome-wide WT Pore-C at 100 kb — AlwI (3.4 M contacts) and BfaI (31 M). Per-chromosome decay, pericentromere clustering near the centromeres (teal ▾), and the faint inter-chromosomal chromocenter grid. AlwI shows more inter-chromosomal signal (~15% vs BfaI ~3%). <b>This is the cis/bulk structure you already have</b> — sister-Pore-C asks which of these contacts are within vs between sisters.</figcaption>
 </figure>
 <figure>
-  <img src="contactmap_sister_decomp.png" alt="Chr1 bulk vs cis-sister vs trans-sister contact maps">
-  <figcaption><b>Fig 8.</b> Sister decomposition of Chr1. <b>cis-sister</b> carries the chromatin folding (arm domains, pericentromere block) — essentially the classic map. <b>trans-sister</b> is dominated by the thin <b>aligned near-diagonal band</b> plus a <b>pericentromere cohesion</b> hotspot (and faint KEE-bridging), i.e. how the two sisters touch. <b>bulk = cis + trans</b> — what you get without strand resolution.</figcaption>
+  <img src="contactmap_sister_decomp.png" alt="Chr1 bulk vs cis-sister vs trans-sister contact maps (model)">
+  <figcaption><b>Fig 8 (model).</b> How sister-Pore-C would split a Chr1 map. <b>cis-sister</b> carries the chromatin folding (arm domains, pericentromere block) — essentially the classic map above. <b>trans-sister</b> is dominated by the thin <b>aligned near-diagonal band</b> plus a <b>pericentromere cohesion</b> hotspot (and faint KEE-bridging), i.e. how the two sisters touch. <b>bulk = cis + trans</b> — what you see today without strand resolution.</figcaption>
 </figure>
 
 <h2>8 · Conclusions</h2>
@@ -168,14 +170,14 @@
 <ul style="margin:8px 0 0">
   <li>δ and σ are assumed; reads scale as <b>(σ/δ)²</b> — plug in the paper's real magnitudes (if δ ≈ 10 kb it is ~9× more reads, still &lt; 0.1 flow cell at 3 h).</li>
   <li>Per-monomer BrdU detection was saturated here (many T per monomer); with low BrdU or short monomers, use the real FORT-A per-T sensitivity and scale reads up.</li>
-  <li>Phenomenological contact kernel + TAIR10 coordinates. Absolute read counts are order-of-magnitude; <b>the ratios (sync vs async, pulse vs pulse) are robust.</b> Next: swap in real Chr1 P(s) from the AlwI/BfaI <code>.pairs</code> and the Col-CC assembly.</li>
+  <li>Hub read estimates now use <b>real p_hub</b> from your AlwI/BfaI maps (Fig 7); the sister-<em>efficiency</em> ε and the contact/pulse model are still phenomenological (TAIR10, simulated labelling). Remaining to calibrate: real per-T DNAscent sensitivity (FORT-A) and CEN180 mappability on Col-CC — both feed the pericentromere confounds, which (not depth) are the real limit.</li>
 </ul>
 </div>
 
 <footer>
   Generated by the <code>spcsim</code> prototype: <code>quick_mc.py</code> (cell/strand/label engine),
   <code>pilot_chr1_sister.py</code> (Fig 3), <code>contactmap_sister.py</code> (Fig 5),
-  <code>pilot_kee_chromocenter.py</code> (Fig 6), <code>simulate_contactmap.py</code> (Figs 7,8), <code>animate_schematics.py</code> (Figs 1,2,4). Reference:
+  <code>pilot_kee_chromocenter.py</code> (Fig 6), <code>real_contactmap.py</code> (Fig 7, real AlwI/BfaI via cooler), <code>simulate_contactmap.py</code> (Fig 8 model), <code>animate_schematics.py</code> (Figs 1,2,4). Reference:
   <a href="https://www.biorxiv.org/content/10.1101/2025.07.09.663929v1" target="_blank" rel="noopener">Conformational asymmetry of replicated human chromosomes</a>, Science 2025.
 </footer>
 </div>
