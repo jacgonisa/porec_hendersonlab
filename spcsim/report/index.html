@@ -36,6 +36,12 @@
   @media(max-width:640px){.grid2{grid-template-columns:1fr}}
   footer{color:var(--mut);font-size:13px;border-top:1px solid var(--line);margin-top:50px;padding-top:18px}
   em.hl{color:var(--yel);font-style:normal}
+  .deckframe img{width:100%;border-radius:8px;display:none;background:var(--bg)}
+  .deckframe img.active{display:block}
+  .decknav{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:8px}
+  .decknav button{background:#2b6cb0;color:#fff;border:0;border-radius:8px;padding:6px 16px;font-size:18px;cursor:pointer;line-height:1}
+  .decknav button:hover{background:#3b82c4}
+  .dcount{color:var(--mut);font-size:13px;min-width:54px;text-align:center}
 </style>
 </head>
 <body>
@@ -50,14 +56,19 @@
 <h2>1 · The idea: BrdU turns strand into sister identity</h2>
 <p>After one S phase in BrdU, each sister chromatid carries BrdU on a <b>defined strand</b>: the sister that inherited the parental Watson strand (call it <b>pW</b>) has its nascent Crick strand labelled; <b>pC</b> is the mirror. Nanopore reads one random strand per monomer, so a BrdU+ monomer read on strand X must come from the sister with BrdU on X. Chromatid identity is continuous along the chromosome (no sister-chromatid exchange).</p>
 <figure>
-  <img src="anim_labelling.gif" alt="replication and BrdU labelling of the two sisters">
+  <div class="deck" id="deck-lab"><div class="deckframe">
+    <img class="dslide active" src="slide_labelling_1.png"><img class="dslide" src="slide_labelling_2.png">
+    <img class="dslide" src="slide_labelling_3.png"><img class="dslide" src="slide_labelling_4.png">
+  </div><div class="decknav"><button onclick="deckStep('deck-lab',-1)">◀</button><span class="dcount">1 / 4</span><button onclick="deckStep('deck-lab',1)">▶</button></div></div>
   <figcaption><b>Fig 1.</b> One S phase in BrdU produces two sisters labelled on opposite strands (pW: BrdU on C; pC: BrdU on W). This strand→sister map is the whole basis of the method.</figcaption>
 </figure>
 
 <h2>2 · Reading a concatemer → a sister call</h2>
 <p>A Pore-C read is a concatemer of several monomers from one nucleus. For any two monomers on the same chromosome: <b>both BrdU+ and read on the same strand → cis-sister</b> (same chromatid); <b>both BrdU+ on opposite strands → trans-sister</b> (between the two sisters). If a monomer is not BrdU+, it can't be assigned (unless rescued by proximity to a labelled one, ≤100 kb).</p>
 <figure>
-  <img src="anim_read.gif" alt="reading a concatemer and classifying a pair as cis- or trans-sister">
+  <div class="deck" id="deck-read"><div class="deckframe">
+    <img class="dslide active" src="slide_read_1.png"><img class="dslide" src="slide_read_2.png"><img class="dslide" src="slide_read_3.png">
+  </div><div class="decknav"><button onclick="deckStep('deck-read',-1)">◀</button><span class="dcount">1 / 3</span><button onclick="deckStep('deck-read',1)">▶</button></div></div>
   <figcaption><b>Fig 2.</b> Strand + label of two monomers yields the sister call. The failure mode in asynchronous tissue is simply that too few monomers are BrdU+, not that the calls are wrong.</figcaption>
 </figure>
 
@@ -93,7 +104,10 @@
 <p>The Gerlich lab (<a href="https://www.biorxiv.org/content/10.1101/2025.07.09.663929v1" target="_blank" rel="noopener">Science 2025, biorxiv 2025.07.09.663929</a>) showed with sister-chromatid-sensitive Hi-C that sisters are consistently <b>staggered by a register shift δ along the 5′→3′ direction of the inherited strand</b> — trans-sister contacts peak at <code>j − i = +δ</code>, not at 0, explained by directionally-misaligned cohesive cohesin.</p>
 <div class="callout key"><b>Why sister-Pore-C is the right tool.</b> The shift is <b>registered to parental-strand orientation</b>. The BrdU strand read tells you which sister each labelled monomer is on, so every trans-sister contact can be <b>signed</b> along that axis. Bulk Hi-C/Pore-C can't orient the pair, so +δ and −δ superimpose into a symmetric diagonal — <b>the asymmetry is invisible without strand resolution.</b></div>
 <figure>
-  <img src="anim_asymmetry.gif" alt="staggered sisters and accumulating signed-offset histogram">
+  <div class="deck" id="deck-asym"><div class="deckframe">
+    <img class="dslide active" src="slide_asym_1.png"><img class="dslide" src="slide_asym_2.png">
+    <img class="dslide" src="slide_asym_3.png"><img class="dslide" src="slide_asym_4.png">
+  </div><div class="decknav"><button onclick="deckStep('deck-asym',-1)">◀</button><span class="dcount">1 / 4</span><button onclick="deckStep('deck-asym',1)">▶</button></div></div>
   <figcaption><b>Fig 4.</b> Strand-oriented trans-sister contacts (blue) build a peak at +δ as reads accumulate; the running mean lands on the true shift. Bulk (grey), with no strand information, stays symmetric at 0. The asymmetry lives entirely in the <em>signed</em> offset.</figcaption>
 </figure>
 
@@ -185,5 +199,29 @@
   <a href="https://www.biorxiv.org/content/10.1101/2025.07.09.663929v1" target="_blank" rel="noopener">Conformational asymmetry of replicated human chromosomes</a>, Science 2025.
 </footer>
 </div>
+<script>
+function deckStep(id, dir){
+  const d = document.getElementById(id);
+  const imgs = [...d.querySelectorAll('.dslide')];
+  let i = imgs.findIndex(x => x.classList.contains('active'));
+  imgs[i].classList.remove('active');
+  i = (i + dir + imgs.length) % imgs.length;
+  imgs[i].classList.add('active');
+  d.querySelector('.dcount').textContent = (i + 1) + ' / ' + imgs.length;
+}
+// arrow keys step the deck nearest the viewport centre
+document.addEventListener('keydown', e => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const decks = [...document.querySelectorAll('.deck')];
+  if (!decks.length) return;
+  const mid = window.innerHeight / 2;
+  const near = decks.reduce((a, b) => {
+    const da = Math.abs(a.getBoundingClientRect().top + a.offsetHeight/2 - mid);
+    const db = Math.abs(b.getBoundingClientRect().top + b.offsetHeight/2 - mid);
+    return db < da ? b : a;
+  });
+  deckStep(near.id, e.key === 'ArrowRight' ? 1 : -1);
+});
+</script>
 </body>
 </html>

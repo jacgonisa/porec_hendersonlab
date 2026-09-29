@@ -24,7 +24,7 @@ def fade(t, a, b): return max(0.0, min(1.0, (t - a) / (b - a)))
 
 
 # ---------------------------------------------------------------- 1. labelling
-def make_labelling(path, N=110, fps=20):
+def make_labelling(path, N=110, fps=20, slide_frames=None):
     fig, ax = plt.subplots(figsize=(7.2, 4.2)); blank(ax)
     def strand(y, x0, x1, color, lw=5, alpha=1, beads=False, bead_alpha=1):
         ax.plot([x0, x1], [y, y], color=color, lw=lw, solid_capstyle='round', alpha=alpha)
@@ -62,12 +62,16 @@ def make_labelling(path, N=110, fps=20):
         # legend
         ax.add_patch(Circle((0.5, 5.6), 0.09, color=YEL)); ax.text(0.7, 5.6, 'BrdU', color=YEL, va='center', fontsize=9)
         return []
+    if slide_frames is not None:
+        for _n, _fr in enumerate(slide_frames, 1):
+            update(_fr); fig.savefig(f'slide_labelling_{_n}.png', dpi=110, facecolor=BG)
+        plt.close(fig); print('wrote labelling slides'); return
     anim = FuncAnimation(fig, update, frames=N, interval=1000 / fps)
     anim.save(path, writer=PillowWriter(fps=fps)); plt.close(fig); print('wrote', path)
 
 
 # ---------------------------------------------------------------- 2. read -> call
-def make_read(path, fps=20):
+def make_read(path, fps=20, slide_frames=None):
     # cases: (name, sisterA, strandreadA, sisterB, strandreadB) ; nascent: pW->C, pC->W
     cases = [
         ('cis-sister', 'pW', 'C', 'pW', 'C', TEAL),      # both pW, both read nascent C -> same -> cis
@@ -110,12 +114,16 @@ def make_read(path, fps=20):
             ax.text(5, 1.5, verdict, ha='center', color=col, fontsize=13, alpha=a)
         ax.text(0.6, 4.0, 'nanopore reads\none random strand', color=GREY, fontsize=8, va='center')
         return []
+    if slide_frames is not None:
+        for _n, _fr in enumerate(slide_frames, 1):
+            update(_fr); fig.savefig(f'slide_read_{_n}.png', dpi=110, facecolor=BG)
+        plt.close(fig); print('wrote read slides'); return
     anim = FuncAnimation(fig, update, frames=N, interval=1000 / fps)
     anim.save(path, writer=PillowWriter(fps=fps)); plt.close(fig); print('wrote', path)
 
 
 # ---------------------------------------------------------------- 3. asymmetry / register shift
-def make_asymmetry(path, N=120, fps=20, delta=3.0, sigma=8.0):
+def make_asymmetry(path, N=120, fps=20, delta=3.0, sigma=8.0, slide_frames=None):
     rng = np.random.default_rng(1)
     Kmax = 4000
     oriented = rng.normal(delta, sigma, Kmax)                 # signed offsets j-i (pW->pC frame)
@@ -160,13 +168,23 @@ def make_asymmetry(path, N=120, fps=20, delta=3.0, sigma=8.0):
         axR.set_title(f'reads accumulated: {k:,}', color=FG, fontsize=11)
         axR.legend(fontsize=8, framealpha=0, labelcolor=FG, loc='upper left')
         return []
+    if slide_frames is not None:
+        for _n, _fr in enumerate(slide_frames, 1):
+            update(_fr); fig.savefig(f'slide_asym_{_n}.png', dpi=110, facecolor=BG)
+        plt.close(fig); print('wrote asym slides'); return
     anim = FuncAnimation(fig, update, frames=N, interval=1000 / fps)
     fig.tight_layout()
     anim.save(path, writer=PillowWriter(fps=fps)); plt.close(fig); print('wrote', path)
 
 
 if __name__ == '__main__':
-    make_labelling('anim_labelling.gif')
-    make_read('anim_read.gif')
-    make_asymmetry('anim_asymmetry.gif')
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == 'slides':
+        make_labelling('anim_labelling.gif', slide_frames=[10, 40, 80, 109])
+        make_read('anim_read.gif', slide_frames=[30, 64, 98])
+        make_asymmetry('anim_asymmetry.gif', slide_frames=[10, 35, 75, 119])
+    else:
+        make_labelling('anim_labelling.gif')
+        make_read('anim_read.gif')
+        make_asymmetry('anim_asymmetry.gif')
     print('done')
