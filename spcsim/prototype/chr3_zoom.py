@@ -1,9 +1,9 @@
 """
-Chr3 zoom of the real AlwI & BfaI Pore-C maps, with data-driven KEE detection.
-A KEE (KNOT-engaged element) makes anomalous long-range / inter-chromosomal contacts,
-so it shows up as a peak in an inter-chromosomal contact track (outside the pericentromere).
-We plot the Chr3 intra map for each enzyme + the KEE-signature track, and annotate the
-strongest p-arm peak.
+Chr3 zoom of the real AlwI & BfaI Pore-C maps, with INTRACHROMOSOMAL KEE detection.
+In Arabidopsis inter-chromosomal contacts are weak; KEEs (KNOT-engaged elements) interact
+largely in cis (long-range within a chromosome — KEE-KEE and to heterochromatin). So we score
+each arm bin by its long-range (>4 Mb) intrachromosomal contact fraction and flag the p-arm peak,
+then show that bin's virtual-4C (its cis contact profile) to reveal its partners.
 
 Run: python chr3_zoom.py   ->  chr3_zoom_AlwI_BfaI.png
 """
@@ -18,9 +18,8 @@ MCOOLS = {'AlwI': f'{BASE}/2025May/results_all_formats_all_runs_AlwI/pairs/all.m
           'BfaI': f'{BASE}/2025December/results_BfaI_WT/WT.mcool'}
 CENBED = '/home/jg2070/Desktop/PhD/PoreC/chr_cens.bed'
 CHR3 = 'Chr3:1-26150667'
-RES_MAP = 50_000        # Chr3 intra map resolution
-RES_TRK = 100_000       # inter-chrom track resolution
-FLANK = 2_000_000
+RES = 50_000
+FLANK, TELO, LR = 2_000_000, 1_500_000, 4_000_000
 
 
 def cen_of(name):
@@ -29,85 +28,74 @@ def cen_of(name):
         for i in range(1, len(f) - 1):
             if f[i].isdigit() and f[i + 1].isdigit() and f[i - 1] == name:
                 return int(f[i]), int(f[i + 1])
-    return None
 
 
 def chr3_intra(mcool, res):
-    c = cooler.Cooler(f'{mcool}::/resolutions/{res}')      # chrom names contain ':', so slice, don't fetch()
+    c = cooler.Cooler(f'{mcool}::/resolutions/{res}')     # names contain ':', so slice not fetch()
     bins = c.bins()[:]
     m = (bins['chrom'].astype(str) == CHR3).values
     return c.matrix(balance=False)[:][np.ix_(m, m)].astype(float)
 
 
-def kee_track(mcool, res):
-    """per-Chr3-bin inter-chromosomal contact fraction (KEE / KNOT signature)."""
-    c = cooler.Cooler(f'{mcool}::/resolutions/{res}')
-    bins = c.bins()[:]
-    nuc = [ch for ch in c.chromnames if ch.lower().startswith('chr')]
-    mask = bins['chrom'].isin(nuc).values
-    M = c.matrix(balance=False)[:][np.ix_(mask, mask)].astype(float)
-    bn = bins[mask].reset_index(drop=True)
-    chrom = bn['chrom'].astype(str).values
-    is3 = chrom == CHR3
-    inter = chrom[:, None] != chrom[None, :]
-    rows = np.where(is3)[0]
-    cov = np.array([M[r].sum() for r in rows])
-    frac = np.array([M[r, inter[r]].sum() / max(M[r].sum(), 1) for r in rows])
-    start = bn['start'].values[is3]
-    return start, frac, cov
+def lr_score(M, cen):
+    nb = M.shape[0]; pos = np.arange(nb) * RES
+    peri = (pos >= cen[0] - FLANK) & (pos <= cen[1] + FLANK)
+    telo = (pos < TELO) | (pos > pos[-1] - TELO)
+    lr = int(LR / RES)
+    dd = np.abs(np.arange(nb)[:, None] - np.arange(nb)[None, :])
+    far = dd > lr
+    cov = M.sum(1)
+    score = np.array([M[i, far[i]].sum() / cov[i] if cov[i] > 0 else 0 for i in range(nb)])
+    return pos, score, peri, telo, cov
 
 
 def main():
-    s, e = cen_of(CHR3)
+    cen = cen_of(CHR3)
     fig = plt.figure(figsize=(13, 8))
-    gs = fig.add_gridspec(2, 2, height_ratios=[3, 1.1], hspace=0.28, wspace=0.15)
-    kee_pos = {}
+    gs = fig.add_gridspec(2, 2, height_ratios=[3, 1.2], hspace=0.3, wspace=0.15)
+    mats = {}
     for k, (name, mc) in enumerate(MCOOLS.items()):
+        M = chr3_intra(mc, RES); mats[name] = M; nb = M.shape[0]
         ax = fig.add_subplot(gs[0, k])
-        M = chr3_intra(mc, RES_MAP)
-        nb = M.shape[0]
         vmax = np.percentile(M[M > 0], 99.5)
         ax.imshow(np.log1p(M), cmap='Reds', vmax=np.log1p(vmax), origin='upper', interpolation='nearest')
-        cs, ce = s // RES_MAP, e // RES_MAP
+        cs, ce = cen[0] // RES, cen[1] // RES
         for b in (cs, ce):
             ax.axhline(b, color='#2b6cb0', lw=0.7, ls='--'); ax.axvline(b, color='#2b6cb0', lw=0.7, ls='--')
+        t = np.arange(0, nb, 100); ax.set_xticks(t); ax.set_xticklabels(t * RES // 10**6)
+        ax.set_yticks(t); ax.set_yticklabels(t * RES // 10**6); ax.set_xlabel('Mb'); ax.set_ylabel('Mb')
         ax.set_title(f'{name}  —  Chr3 (50 kb)', fontsize=11)
-        ticks = np.arange(0, nb, 100); ax.set_xticks(ticks); ax.set_xticklabels((ticks * RES_MAP // 1_000_000));
-        ax.set_yticks(ticks); ax.set_yticklabels((ticks * RES_MAP // 1_000_000)); ax.set_xlabel('Mb'); ax.set_ylabel('Mb')
-        ax.text(cs + (ce - cs) / 2, -6, 'CEN', color='#2b6cb0', ha='center', fontsize=8)
-        ax.text(nb * 0.15, -6, 'p arm', color='#555', ha='center', fontsize=8)
-        ax.text(nb * 0.9, -6, 'q arm', color='#555', ha='center', fontsize=8)
-    # KEE track (bottom, spans both) — detect p-arm peak from AlwI+BfaI averaged
-    axt = fig.add_subplot(gs[1, :])
-    TELO = 1_500_000; parm_lo, parm_hi = TELO, s - FLANK      # p arm, minus telomere & pericentromere
+        ax.text(nb * 0.16, -6, 'p arm', color='#555', ha='center', fontsize=8)
+        ax.text((cs + ce) / 2, -6, 'CEN', color='#2b6cb0', ha='center', fontsize=8)
+        ax.text(nb * 0.88, -6, 'q arm', color='#555', ha='center', fontsize=8)
+
+    # intrachromosomal long-range track + KEE detection (anchor on BfaI, deeper)
+    axt = fig.add_subplot(gs[1, :]); peaks = {}
     smooth = lambda x: np.convolve(x, np.ones(3) / 3, 'same')
-    peaks = {}
-    for name, mc in MCOOLS.items():
-        start, frac, cov = kee_track(mc, RES_TRK); fs = smooth(frac)
-        axt.plot(start / 1e6, fs, label=name, lw=1.5)
-        valid = (start >= parm_lo) & (start <= parm_hi) & (cov >= np.median(cov[cov > 0]))
-        peaks[name] = start[valid][np.argmax(fs[valid])]
+    for name in MCOOLS:
+        pos, score, peri, telo, cov = lr_score(mats[name], cen)
+        axt.plot(pos / 1e6, smooth(score), label=name, lw=1.5)
+        arm = (~peri) & (~telo) & (pos < cen[0]) & (cov >= np.median(cov[cov > 0]))
+        peaks[name] = pos[arm][np.argmax(smooth(score)[arm])]
+    kee = peaks['BfaI']
+    axt.axvspan((cen[0] - FLANK) / 1e6, (cen[1] + FLANK) / 1e6, color='#2b6cb0', alpha=0.12)
     axt.axvspan(0, TELO / 1e6, color='#888', alpha=0.10)
-    axt.axvspan((s - FLANK) / 1e6, (e + FLANK) / 1e6, color='#2b6cb0', alpha=0.12)
-    ymax = axt.get_ylim()[1]
-    axt.text(TELO / 2e6, ymax * 0.8, 'telomere', color='#888', ha='center', fontsize=7)
-    axt.text((s + e) / 2e6, ymax * 0.85, 'pericentromere\n(chromocenter)', color='#2b6cb0', ha='center', fontsize=8)
-    kee = peaks['BfaI']      # anchor on the deeper, cleaner-baseline dataset
-    axt.axvline(kee / 1e6, color='#d97706', lw=1.8)
-    axt.annotate(f'candidate KEE ~{kee/1e6:.1f} Mb', xy=(kee / 1e6, ymax * 0.5),
-                 xytext=(kee / 1e6 + 2.5, ymax * 0.75), color='#d97706', fontsize=9,
+    ym = axt.get_ylim()[1]
+    axt.text((cen[0] + cen[1]) / 2e6, ym * 0.85, 'pericentromere', color='#2b6cb0', ha='center', fontsize=8)
+    kb = int(kee // RES)
+    axt.axvline(kee / 1e6, color='#d97706', lw=1.5, ls='--')
+    axt.annotate(f'p-arm long-range-cis peak ~{kee/1e6:.1f} Mb\n(candidate KEE — confirm with published coords)',
+                 xy=(kee / 1e6, ym * 0.5), xytext=(kee / 1e6 + 2.0, ym * 0.82), color='#d97706', fontsize=8,
                  arrowprops=dict(arrowstyle='->', color='#d97706'))
-    axt.set_xlabel('Chr3 position (Mb)'); axt.set_ylabel('inter-chromosomal\ncontact fraction')
-    axt.set_title('KEE / KNOT signature: bins that contact other chromosomes (peaks outside the pericentromere = KEEs)', fontsize=10)
-    axt.legend(fontsize=8); axt.set_xlim(0, 26.15)
-    # mark the KEE on the maps
+    axt.set_ylabel('long-range cis\ncontact fraction'); axt.set_xlim(0, 26.15); axt.set_xlabel('Chr3 position (Mb)'); axt.legend(fontsize=8)
+    axt.set_title('Intrachromosomal structure: long-range (>4 Mb) cis contact fraction per bin '
+                  '(rises into the pericentromere; euchromatic KEEs are subtle at this depth)', fontsize=9.5)
     for k, name in enumerate(MCOOLS):
-        ax = fig.axes[k]; kb = int(kee // RES_MAP)
-        ax.scatter([kb], [-3], marker='v', s=40, color='#d97706', clip_on=False)
-        ax.scatter([-3], [kb], marker='>', s=40, color='#d97706', clip_on=False)
-    fig.suptitle('Chr3 zoom of the real Pore-C maps + data-driven KEE detection (p arm)', fontsize=13)
+        fig.axes[k].scatter([kb], [-3], marker='v', s=36, color='#d97706', clip_on=False)
+        fig.axes[k].scatter([-3], [kb], marker='>', s=36, color='#d97706', clip_on=False)
+    fig.suptitle('Chr3 zoom of the real AlwI & BfaI Pore-C maps (KEEs interact in cis; inter-chromosomal signal is weak in Arabidopsis)', fontsize=12)
     fig.savefig('chr3_zoom_AlwI_BfaI.png', dpi=140, bbox_inches='tight')
-    print('candidate KEE (p arm), Mb:', {k: round(v / 1e6, 2) for k, v in peaks.items()})
+    print('candidate KEE (p arm, cis), Mb:', {k: round(v / 1e6, 2) for k, v in peaks.items()})
     print('wrote chr3_zoom_AlwI_BfaI.png')
 
 
