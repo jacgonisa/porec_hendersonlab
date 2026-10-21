@@ -50,11 +50,14 @@
 <div class="wrap">
   <div>
     <canvas id="hm" width="640" height="640"></canvas>
-    <canvas id="tracks" width="640" height="90"></canvas>
-    <div class="legend"><span><span class="sw" style="background:#9aa7b4"></span>CEN178 satellite</span>
-      <span><span class="sw" style="background:#c0152f"></span>Gypsy/CRM LTR‑retrotransposon</span>
-      <span><span class="sw" style="background:#2b6cb0"></span>enzyme cut sites</span>
-      <span>· dotted = CEN‑core</span></div>
+    <canvas id="tracks" width="640" height="178"></canvas>
+    <div class="legend"><span><span class="sw" style="background:#2b6cb0"></span>cut sites</span>
+      <span><span class="sw" style="background:#9aa7b4"></span>satellite</span>
+      <span><span class="sw" style="background:#c0152f"></span>Gypsy/CRM TE</span>
+      <span><span class="sw" style="background:#6a1b9a"></span>CENH3 ChIP</span>
+      <span><span class="sw" style="background:#00897b"></span>DiMeLo 6mA</span>
+      <span><span class="sw" style="background:#e65100"></span>mCHH</span>
+      <span>· tracks follow genotype · dotted = CEN‑core</span></div>
     <div id="status"></div>
   </div>
   <canvas id="cb" width="18" height="300" title="colour scale"></canvas>
@@ -77,7 +80,7 @@ const cache={}; let MET=null;
 const hm=document.getElementById('hm'), hx=hm.getContext('2d');
 const tk=document.getElementById('tracks'), tx=tk.getContext('2d');
 const off=document.createElement('canvas'); const ox2=off.getContext('2d');
-const HS=640, TH=90;
+const HS=640, TH=178;
 let G=null, view={x0:0,y0:0,w:1};
 function fname(){const r=(E.enzyme==='AlwI')?E.rescue:'unrescued'; return `data/${E.enzyme}_${E.geno}_${r}_${E.res}kb.json`;}
 async function getJSON(f){ if(cache[f]) return cache[f]; const d=await fetch(f).then(r=>r.json()); cache[f]=d; return d; }
@@ -127,16 +130,26 @@ function draw(){
   hx.strokeStyle='rgba(0,0,0,.4)';hx.setLineDash([4,3]);hx.lineWidth=1;
   for(const b of t.core){const sx=(b-view.x0)*sc, sy=(b-view.y0)*sc;hx.beginPath();hx.moveTo(sx,0);hx.lineTo(sx,HS);hx.moveTo(0,sy);hx.lineTo(HS,sy);hx.stroke();}
   hx.setLineDash([]);
-  // tracks over current x-range
-  tx.clearRect(0,0,HS,TH); const cut=(E.enzyme==='AlwI')?t.alwi:t.bfai; const cmax=Math.max(...cut)||1; const w=HS/view.w;
-  for(let b=Math.floor(view.x0);b<view.x0+view.w&&b<n;b++){const sx=(b-view.x0)*w;const h=36*cut[b]/cmax;tx.fillStyle='#2b6cb0';tx.fillRect(sx,42-h,Math.max(1,w),h);
-    tx.fillStyle='#9aa7b4';tx.fillRect(sx,TH-40*t.sat[b],Math.max(1,w),40*t.sat[b]);
-    tx.fillStyle='rgba(192,21,47,.9)';tx.fillRect(sx,TH-40*t.gyp[b],Math.max(1,w),40*t.gyp[b]);}
-  tx.fillStyle='#777';tx.font='10px sans-serif';tx.fillText(E.enzyme+' cut sites',4,10);
+  // ---- stacked tracks (genotype-aware for bio tracks) ----
+  tx.clearRect(0,0,HS,TH); const w=HS/view.w;
+  const b0=Math.max(0,Math.floor(view.x0)), b1=Math.min(n,Math.ceil(view.x0+view.w));
+  const bands=[
+    {label:E.enzyme+' cut sites', data:(E.enzyme==='AlwI'?t.alwi:t.bfai), color:'#2b6cb0'},
+    {label:'satellite / Gypsy TE', te:true},
+    {label:'CENH3 ChIP log2 ('+(E.geno==='OX'?'CENH3ox':'WT')+')', data:(E.geno==='OX'?t.cenh3_ox:t.cenh3_wt), color:'#6a1b9a'},
+    {label:'DiMeLo 6mA ('+(E.geno==='OX'?'CENH3ox':'WT')+')', data:(E.geno==='OX'?t.dimelo_ox:t.dimelo_wt), color:'#00897b'},
+    {label:'mCHH ('+(E.geno==='OX'?'CENH3ox':'WT')+')', data:(E.geno==='OX'?t.mchh_ox:t.mchh_wt), color:'#e65100'},
+  ];
+  const bh=TH/bands.length;
+  bands.forEach((bd,bi)=>{const base=(bi+1)*bh-1;
+    if(bd.te){for(let b=b0;b<b1;b++){const sx=(b-view.x0)*w;
+      tx.fillStyle='#9aa7b4';tx.fillRect(sx,base-(bh-4)*t.sat[b],Math.max(1,w),(bh-4)*t.sat[b]);
+      tx.fillStyle='rgba(192,21,47,.9)';tx.fillRect(sx,base-(bh-4)*t.gyp[b],Math.max(1,w),(bh-4)*t.gyp[b]);}}
+    else if(bd.data){let mx=1e-9;for(let b=0;b<n;b++)mx=Math.max(mx,bd.data[b]||0);tx.fillStyle=bd.color;
+      for(let b=b0;b<b1;b++){const sx=(b-view.x0)*w;const v=Math.max(0,bd.data[b]||0);const h=(bh-4)*v/mx;tx.fillRect(sx,base-h,Math.max(1,w),h);}}
+    tx.fillStyle='#444';tx.font='9px sans-serif';tx.fillText(bd.label,3,bi*bh+9);});
   tx.strokeStyle='rgba(0,0,0,.4)';tx.setLineDash([4,3]);for(const b of t.core){const sx=(b-view.x0)*w;tx.beginPath();tx.moveTo(sx,0);tx.lineTo(sx,TH);tx.stroke();}tx.setLineDash([]);
-  // Mb ticks
-  tx.fillStyle='#555';tx.font='9px sans-serif';
-  for(let f=0;f<=4;f++){const b=view.x0+f/4*view.w;const mb=(b*t.res/1e6).toFixed(1);tx.fillText(mb,clamp(f/4*HS-8,0,HS-22),TH-2);}
+  tx.fillStyle='#555';tx.font='9px sans-serif';for(let f=0;f<=4;f++){const b=view.x0+f/4*view.w;tx.fillText((b*t.res/1e6).toFixed(1),clamp(f/4*HS-8,0,HS-22),TH-1);}
   document.getElementById('status').textContent=`${G.nz.toLocaleString()} non-zero contacts · view ${(view.x0*t.res/1e6).toFixed(1)}–${((view.x0+view.w)*t.res/1e6).toFixed(1)} Mb · scroll=zoom, drag=pan`;
 }
 function barchart(cid,obj,logy,color){
