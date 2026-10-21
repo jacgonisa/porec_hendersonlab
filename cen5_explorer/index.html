@@ -39,6 +39,7 @@
 <div class="controls">
   <div class="ctl"><label>Enzyme</label><select id="enzyme"><option>BfaI</option><option>AlwI</option></select></div>
   <div class="ctl"><label>Genotype</label><select id="geno"><option value="WT">WT (Col-0)</option><option value="OX">CENH3ox</option></select></div>
+  <div class="ctl" id="runctl"><label>AlwI run</label><select id="run"></select></div>
   <div class="ctl"><label>AlwI rescue</label><select id="rescue"><option value="unrescued">unrescued</option><option value="rescued">rescued (SA-tag)</option></select></div>
   <div class="ctl"><label>Normalisation</label><select id="norm"><option value="oe">observed/expected</option><option value="raw">raw (log)</option><option value="vc">coverage-balanced</option></select></div>
   <div class="ctl"><label>Resolution</label><select id="res"><option value="100">100 kb</option><option value="50">50 kb</option><option value="25">25 kb</option></select></div>
@@ -75,14 +76,18 @@
 <div class="note"><b>Caveat:</b> CEN178 satellite under‑maps (3–5× lower coverage) and enzymes cut transposons ~2× more, so satellite‑vs‑transposon contrasts are largely mapping/cut‑site bias — read the overall centromere structure, not TE‑vs‑satellite. WT‑vs‑CENH3ox differences are subtle (~1.3× in aggregate), not visible by eye.</div>
 
 <script>
-const E={enzyme:'BfaI',geno:'WT',rescue:'unrescued',norm:'oe',res:'100'};
+const E={enzyme:'BfaI',geno:'WT',run:'pooled',rescue:'unrescued',norm:'oe',res:'100'};
+const RUNS={WT:['pooled','Sept','May','Apr15','Apr06','ZymoAug'],OX:['Oct']};
+function setRuns(){const sel=document.getElementById('run');const rs=RUNS[E.geno];sel.innerHTML=rs.map(r=>`<option>${r}</option>`).join('');if(!rs.includes(E.run))E.run=rs[0];sel.value=E.run;}
+function toggleAlwI(){const isA=E.enzyme==='AlwI';document.getElementById('runctl').style.display=isA?'':'none';document.getElementById('rescue').disabled=!isA;}
 const cache={}; let MET=null;
 const hm=document.getElementById('hm'), hx=hm.getContext('2d');
 const tk=document.getElementById('tracks'), tx=tk.getContext('2d');
 const off=document.createElement('canvas'); const ox2=off.getContext('2d');
 const HS=640, TH=178;
 let G=null, view={x0:0,y0:0,w:1};
-function fname(){const r=(E.enzyme==='AlwI')?E.rescue:'unrescued'; return `data/${E.enzyme}_${E.geno}_${r}_${E.res}kb.json`;}
+function fname(){const r=(E.enzyme==='AlwI')?E.rescue:'unrescued';
+  return (E.enzyme==='AlwI')?`data/AlwI_${E.geno}_${E.run}_${r}_${E.res}kb.json`:`data/BfaI_${E.geno}_${r}_${E.res}kb.json`;}
 async function getJSON(f){ if(cache[f]) return cache[f]; const d=await fetch(f).then(r=>r.json()); cache[f]=d; return d; }
 function lerp(a,b,t){return a+(b-a)*t;}
 function ramp(s,t){t=Math.max(0,Math.min(1,t));for(let i=0;i<s.length-1;i++){const[p0,c0]=s[i],[p1,c1]=s[i+1];if(t<=p1){const u=(t-p0)/(p1-p0||1);return[lerp(c0[0],c1[0],u),lerp(c0[1],c1[1],u),lerp(c0[2],c1[2],u)];}}return s[s.length-1][1];}
@@ -93,7 +98,7 @@ function pct(a,p){const s=a.filter(isFinite).sort((x,y)=>x-y);return s.length?s[
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
 async function compute(){
-  document.getElementById('rescue').disabled=(E.enzyme!=='AlwI');
+  toggleAlwI();
   const m=await getJSON(fname()); const t=await getJSON(`data/tracks_${E.res}kb.json`);
   const n=m.n; const M=new Float64Array(n*n);
   for(let k=0;k<m.i.length;k++){const i=m.i[k],j=m.j[k],v=m.v[k];M[i*n+j]=v;M[j*n+i]=v;}
@@ -120,7 +125,7 @@ async function compute(){
   // colorbar
   const cb=document.getElementById('cb'),cx=cb.getContext('2d');for(let y=0;y<300;y++){const c=cmap(1-y/300);cx.fillStyle=`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;cx.fillRect(0,y,18,1);}
   draw(); metrics();
-  const rn=(E.enzyme==='AlwI')?(' · '+E.rescue):'';
+  const rn=(E.enzyme==='AlwI')?(' · '+E.run+' · '+E.rescue):'';
   document.getElementById('title').textContent=`${E.enzyme} · ${E.geno==='WT'?'WT (Col-0)':'CENH3ox'}${rn} · ${E.norm==='oe'?'O/E':E.norm==='vc'?'coverage-balanced':'raw(log)'} · ${E.res} kb · Chr5 (${(t.chrlen/1e6).toFixed(1)} Mb)`;
 }
 function draw(){
@@ -172,7 +177,7 @@ function barchart(cid,obj,logy,color){
 }
 function metrics(){
   if(!MET){document.getElementById('m_reads').textContent='…';return;}
-  const d=MET[`${E.enzyme}_${E.geno}`]; if(!d)return;
+  const key=(E.enzyme==='AlwI')?`AlwI_${E.geno}_${E.run}`:`BfaI_${E.geno}`; const d=MET[key]; if(!d){document.getElementById('m_reads').textContent='–';return;}
   const r=(E.enzyme==='AlwI')?E.rescue:'unrescued';
   document.getElementById('m_reads').textContent=d.reads.toLocaleString();
   document.getElementById('m_contacts').textContent=(d.contacts[r]/1e6).toFixed(1)+' M';
@@ -190,9 +195,9 @@ hm.addEventListener('mousedown',e=>{drag={x:e.clientX,y:e.clientY,x0:view.x0,y0:
 window.addEventListener('mousemove',e=>{if(!drag||!G)return;const dpb=view.w/HS;view.x0=clamp(drag.x0-(e.clientX-drag.x)*dpb,0,G.n-view.w);view.y0=clamp(drag.y0-(e.clientY-drag.y)*dpb,0,G.n-view.w);draw();});
 window.addEventListener('mouseup',()=>{drag=null;hm.classList.remove('drag');});
 document.getElementById('reset').addEventListener('click',()=>{if(G){view={x0:0,y0:0,w:G.n};draw();}});
-for(const id of ['enzyme','geno','rescue','norm','res'])document.getElementById(id).addEventListener('change',ev=>{E[id]=ev.target.value;compute();});
+document.getElementById('enzyme').addEventListener('change',e=>{E.enzyme=e.target.value;toggleAlwI();setRuns();compute();});document.getElementById('geno').addEventListener('change',e=>{E.geno=e.target.value;setRuns();compute();});document.getElementById('run').addEventListener('change',e=>{E.run=e.target.value;compute();});for(const id of ['rescue','norm','res'])document.getElementById(id).addEventListener('change',ev=>{E[id]=ev.target.value;compute();});
 document.getElementById('dl').addEventListener('click',()=>{const c=document.createElement('canvas');c.width=HS;c.height=HS+TH+4;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(hm,0,0);g.drawImage(tk,0,HS+4);const a=document.createElement('a');a.download=`CEN5_${E.enzyme}_${E.geno}_${E.res}kb_${E.norm}.png`;a.href=c.toDataURL();a.click();});
-getJSON('data/metrics.json').then(d=>{MET=d;metrics();});
+setRuns();toggleAlwI();getJSON('data/metrics.json').then(d=>{MET=d;metrics();});
 compute();
 </script>
 </body>
