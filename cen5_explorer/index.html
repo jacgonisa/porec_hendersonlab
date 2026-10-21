@@ -140,7 +140,7 @@ function draw(){
   const b0=Math.max(0,Math.floor(view.x0)), b1=Math.min(n,Math.ceil(view.x0+view.w));
   const G5=(E.geno==='OX'?'CENH3ox':'WT');
   const bands=[
-    {label:E.enzyme+' cut sites', data:(E.enzyme==='AlwI'?t.alwi:t.bfai), color:'#2b6cb0'},
+    {label:E.enzyme+' cut sites', data:(E.enzyme==='AlwI'?t.alwi:t.bfai), color:'#2b6cb0', bars:true},
     {label:'satellite / Gypsy TE', te:true},
     {label:'CENH3 ChIP (log2)', data:t.cenh3_chip, color:'#6a1b9a'},
     {label:'DiMeLo 6mA log2(CENH3/IgG) · '+G5, data:(E.geno==='OX'?t.dimelo_ox:t.dimelo_wt), color:'#00897b'},
@@ -151,6 +151,8 @@ function draw(){
     if(bd.te){for(let b=b0;b<b1;b++){const sx=(b-view.x0)*w;
       tx.fillStyle='#9aa7b4';tx.fillRect(sx,base-(bh-5)*t.sat[b],Math.max(1,w),(bh-5)*t.sat[b]);
       tx.fillStyle='rgba(192,21,47,.9)';tx.fillRect(sx,base-(bh-5)*t.gyp[b],Math.max(1,w),(bh-5)*t.gyp[b]);}}
+    else if(bd.bars&&bd.data){let mx=1e-9;for(let b=0;b<n;b++)mx=Math.max(mx,bd.data[b]||0);tx.fillStyle=bd.color;
+      for(let b=b0;b<b1;b++){const sx=(b-view.x0)*w;const h=(bh-5)*(bd.data[b]||0)/mx;tx.fillRect(sx,base-h,Math.max(1,w-0.3),h);}}
     else if(bd.data){
       let mn=Infinity,mx=-Infinity;for(let b=0;b<n;b++){const v=bd.data[b];if(isFinite(v)){if(v<mn)mn=v;if(v>mx)mx=v;}}
       if(!isFinite(mn)){mn=0;mx=1;} const rng=(mx-mn)||1; const yof=b=>base-(bh-5)*((isFinite(bd.data[b])?bd.data[b]:mn)-mn)/rng;
