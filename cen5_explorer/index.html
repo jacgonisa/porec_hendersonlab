@@ -7,26 +7,34 @@
 <style>
   :root{--ink:#1a1a1a;--mut:#666;--line:#ddd;--box:#f7f7f8;--accent:#c0152f}
   *{box-sizing:border-box}
-  body{font:15px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);margin:0;padding:18px 20px 60px;max-width:1040px;margin:0 auto}
+  body{font:15px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);margin:0 auto;padding:18px 20px 60px;max-width:1120px}
   h1{font-size:21px;margin:0 0 2px} .sub{color:var(--mut);font-size:13.5px;margin:0 0 14px}
-  .controls{display:flex;flex-wrap:wrap;gap:14px;background:var(--box);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:14px}
+  .controls{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;background:var(--box);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px}
   .ctl{display:flex;flex-direction:column;gap:3px} .ctl label{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}
-  select{font-size:14px;padding:5px 8px;border:1px solid #bbb;border-radius:6px;background:#fff;min-width:120px}
+  select{font-size:14px;padding:5px 8px;border:1px solid #bbb;border-radius:6px;background:#fff;min-width:118px}
   select:disabled{opacity:.4}
-  #title{font-size:14px;font-weight:600;margin:4px 0 8px}
+  button{font-size:13px;padding:6px 11px;border:1px solid #bbb;border-radius:6px;background:#fff;cursor:pointer}
+  #title{font-size:14px;font-weight:600;margin:2px 0 8px}
   .wrap{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
-  canvas{image-rendering:pixelated;border:1px solid var(--line);border-radius:4px;background:#fff}
-  #cbar{display:flex;flex-direction:column;align-items:center;font-size:11px;color:var(--mut)}
+  canvas{background:#fff}
+  #hm{border:1px solid var(--line);border-radius:4px;cursor:grab;image-rendering:pixelated}
+  #hm.drag{cursor:grabbing}
+  #tracks{border:1px solid var(--line);border-radius:4px;margin-top:4px}
+  #cb{border:1px solid var(--line)}
+  .panel{width:300px;border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:13px}
+  .panel h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.03em;color:var(--mut)}
+  .m{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dotted #eee}
+  .m b{font-variant-numeric:tabular-nums}
+  .chart{margin-top:10px} .chart .ct{font-size:11px;color:var(--mut);margin-bottom:2px}
   .note{font-size:12.5px;color:var(--mut);background:#fff8ec;border-left:3px solid #e8820c;padding:9px 12px;border-radius:4px;margin-top:14px}
-  button{font-size:13px;padding:6px 12px;border:1px solid #bbb;border-radius:6px;background:#fff;cursor:pointer;margin-top:6px}
-  #status{font-size:12px;color:var(--mut)}
-  .legend{font-size:11.5px;color:var(--mut);display:flex;gap:14px;margin-top:4px}
+  .legend{font-size:11.5px;color:var(--mut);display:flex;gap:14px;margin-top:5px;flex-wrap:wrap}
   .sw{display:inline-block;width:11px;height:11px;border-radius:2px;vertical-align:-1px;margin-right:3px}
+  #status{font-size:12px;color:var(--mut);margin-top:3px}
 </style>
 </head>
 <body>
 <h1>Arabidopsis centromere 5 — Pore-C explorer</h1>
-<p class="sub">Full Chr5, complete Col-CC assembly. Toggle enzyme, genotype, AlwI Type IIS rescue, normalisation and resolution. Cut-site profile + transposon track below.</p>
+<p class="sub">Full Chr5, complete Col-CC assembly. Toggle options; <b>scroll to zoom, drag to pan</b>. Cut-site + transposon tracks below; library metrics on the right.</p>
 
 <div class="controls">
   <div class="ctl"><label>Enzyme</label><select id="enzyme"><option>BfaI</option><option>AlwI</option></select></div>
@@ -34,93 +42,137 @@
   <div class="ctl"><label>AlwI rescue</label><select id="rescue"><option value="unrescued">unrescued</option><option value="rescued">rescued (SA-tag)</option></select></div>
   <div class="ctl"><label>Normalisation</label><select id="norm"><option value="oe">observed/expected</option><option value="raw">raw (log)</option><option value="vc">coverage-balanced</option></select></div>
   <div class="ctl"><label>Resolution</label><select id="res"><option value="100">100 kb</option><option value="50">50 kb</option><option value="25">25 kb</option></select></div>
+  <div class="ctl"><label>&nbsp;</label><button id="reset">⤢ reset zoom</button></div>
   <div class="ctl"><label>&nbsp;</label><button id="dl">⬇ PNG</button></div>
 </div>
 
 <div id="title">—</div>
 <div class="wrap">
   <div>
-    <canvas id="hm" width="720" height="720"></canvas>
-    <canvas id="tracks" width="720" height="90"></canvas>
+    <canvas id="hm" width="640" height="640"></canvas>
+    <canvas id="tracks" width="640" height="90"></canvas>
     <div class="legend"><span><span class="sw" style="background:#9aa7b4"></span>CEN178 satellite</span>
       <span><span class="sw" style="background:#c0152f"></span>Gypsy/CRM LTR‑retrotransposon</span>
       <span><span class="sw" style="background:#2b6cb0"></span>enzyme cut sites</span>
       <span>· dotted = CEN‑core</span></div>
     <div id="status"></div>
   </div>
-  <div id="cbar"><canvas id="cb" width="18" height="300"></canvas><div id="cbhi">–</div><div style="flex:1"></div><div id="cblo">–</div></div>
+  <canvas id="cb" width="18" height="300" title="colour scale"></canvas>
+  <div class="panel">
+    <h3>Library metrics</h3>
+    <div class="m"><span>reads (concatemers)</span><b id="m_reads">–</b></div>
+    <div class="m"><span>contacts</span><b id="m_contacts">–</b></div>
+    <div class="m"><span>monomers / concatemer</span><b id="m_mpc">–</b></div>
+    <div class="m"><span>mean monomer length</span><b id="m_len">–</b></div>
+    <div class="chart"><div class="ct">monomers per concatemer</div><canvas id="ch_order" width="272" height="86"></canvas></div>
+    <div class="chart"><div class="ct">monomer length (bp)</div><canvas id="ch_len" width="272" height="86"></canvas></div>
+  </div>
 </div>
 
-<div class="note"><b>Caveat:</b> the CEN178 satellite is highly repetitive and under‑maps with short monomers (3–5× lower coverage than transposons), and enzymes cut transposons ~2× more. So apparent satellite‑vs‑transposon contrasts are largely mapping/cut‑site bias — interpret the <i>overall centromere structure</i>, not satellite‑vs‑TE differences. WT‑vs‑CENH3ox differences are subtle (~1.3× in aggregate) and not visible by eye in single maps.</div>
+<div class="note"><b>Caveat:</b> CEN178 satellite under‑maps (3–5× lower coverage) and enzymes cut transposons ~2× more, so satellite‑vs‑transposon contrasts are largely mapping/cut‑site bias — read the overall centromere structure, not TE‑vs‑satellite. WT‑vs‑CENH3ox differences are subtle (~1.3× in aggregate), not visible by eye.</div>
 
 <script>
 const E={enzyme:'BfaI',geno:'WT',rescue:'unrescued',norm:'oe',res:'100'};
-const cache={};
+const cache={}; let MET=null;
 const hm=document.getElementById('hm'), hx=hm.getContext('2d');
 const tk=document.getElementById('tracks'), tx=tk.getContext('2d');
-const off=document.createElement('canvas'); const ox=off.getContext('2d');
+const off=document.createElement('canvas'); const ox2=off.getContext('2d');
+const HS=640, TH=90;
+let G=null, view={x0:0,y0:0,w:1};
 function fname(){const r=(E.enzyme==='AlwI')?E.rescue:'unrescued'; return `data/${E.enzyme}_${E.geno}_${r}_${E.res}kb.json`;}
 async function getJSON(f){ if(cache[f]) return cache[f]; const d=await fetch(f).then(r=>r.json()); cache[f]=d; return d; }
-// colormaps
 function lerp(a,b,t){return a+(b-a)*t;}
-function ramp(stops,t){t=Math.max(0,Math.min(1,t));for(let i=0;i<stops.length-1;i++){const[p0,c0]=stops[i],[p1,c1]=stops[i+1];if(t<=p1){const u=(t-p0)/(p1-p0);return[lerp(c0[0],c1[0],u),lerp(c0[1],c1[1],u),lerp(c0[2],c1[2],u)];}}return stops[stops.length-1][1];}
+function ramp(s,t){t=Math.max(0,Math.min(1,t));for(let i=0;i<s.length-1;i++){const[p0,c0]=s[i],[p1,c1]=s[i+1];if(t<=p1){const u=(t-p0)/(p1-p0||1);return[lerp(c0[0],c1[0],u),lerp(c0[1],c1[1],u),lerp(c0[2],c1[2],u)];}}return s[s.length-1][1];}
 const HIC=[[0,[255,255,255]],[.2,[255,240,224]],[.4,[253,204,138]],[.6,[252,141,89]],[.78,[227,74,51]],[.9,[179,0,0]],[1,[109,0,0]]];
 const RDBU=[[0,[33,102,172]],[.25,[103,169,207]],[.5,[247,247,247]],[.75,[239,138,98]],[1,[178,24,43]]];
-function hic(t){return ramp(HIC,t);} function rdbu(t){return ramp(RDBU,t);}
-function pct(a,p){const s=a.filter(v=>isFinite(v)).sort((x,y)=>x-y);return s.length?s[Math.min(s.length-1,Math.floor(p/100*s.length))]:0;}
+const hic=t=>ramp(HIC,t), rdbu=t=>ramp(RDBU,t);
+function pct(a,p){const s=a.filter(isFinite).sort((x,y)=>x-y);return s.length?s[Math.min(s.length-1,Math.floor(p/100*s.length))]:0;}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
-async function render(){
+async function compute(){
   document.getElementById('rescue').disabled=(E.enzyme!=='AlwI');
   const m=await getJSON(fname()); const t=await getJSON(`data/tracks_${E.res}kb.json`);
   const n=m.n; const M=new Float64Array(n*n);
   for(let k=0;k<m.i.length;k++){const i=m.i[k],j=m.j[k],v=m.v[k];M[i*n+j]=v;M[j*n+i]=v;}
-  let disp=new Float64Array(n*n).fill(NaN), cmap, lo,hi, center=false;
+  let disp=new Float64Array(n*n).fill(NaN), cmap,lo,hi,center=false;
   if(E.norm==='raw'||E.norm==='vc'){
     let A=M;
     if(E.norm==='vc'){const cov=new Float64Array(n);for(let i=0;i<n;i++){let s=0;for(let j=0;j<n;j++)s+=M[i*n+j];cov[i]=s;}
       let mc=0,c=0;for(let i=0;i<n;i++)if(cov[i]>0){mc+=cov[i];c++;}mc/=c;A=new Float64Array(n*n);
-      for(let i=0;i<n;i++)for(let j=0;j<n;j++){if(M[i*n+j]>0&&cov[i]>0&&cov[j]>0)A[i*n+j]=M[i*n+j]/Math.sqrt(cov[i]*cov[j])*mc;}}
+      for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(M[i*n+j]>0&&cov[i]>0&&cov[j]>0)A[i*n+j]=M[i*n+j]/Math.sqrt(cov[i]*cov[j])*mc;}
     for(let k=0;k<n*n;k++)disp[k]=A[k]>0?Math.log10(1+A[k]):NaN;
     const arr=Array.from(disp); lo=pct(arr,55); hi=pct(arr,99.6); cmap=hic;
-  } else { // O/E
-    const exp=new Float64Array(n), cnt=new Float64Array(n);
-    for(let i=0;i<n;i++)for(let j=i;j<n;j++){if(M[i*n+j]>0){exp[j-i]+=M[i*n+j];cnt[j-i]++;}}
+  } else {
+    const exp=new Float64Array(n),cnt=new Float64Array(n);
+    for(let i=0;i<n;i++)for(let j=i;j<n;j++)if(M[i*n+j]>0){exp[j-i]+=M[i*n+j];cnt[j-i]++;}
     for(let d=0;d<n;d++)exp[d]=cnt[d]>0?exp[d]/cnt[d]:NaN;
     for(let i=0;i<n;i++)for(let j=0;j<n;j++){const v=M[i*n+j];disp[i*n+j]=(v>0&&exp[Math.abs(i-j)]>0)?Math.log2(v/exp[Math.abs(i-j)]):NaN;}
     lo=-2;hi=2;cmap=rdbu;center=true;
   }
-  // draw heatmap
-  off.width=n;off.height=n; const img=ox.createImageData(n,n); const D=img.data;
-  for(let k=0;k<n*n;k++){let c;const v=disp[k];
-    if(!isFinite(v)){c=[242,242,242];}else{const tt=(v-lo)/(hi-lo);c=cmap(tt);}
-    D[k*4]=c[0];D[k*4+1]=c[1];D[k*4+2]=c[2];D[k*4+3]=255;}
-  ox.putImageData(img,0,0);
-  hx.imageSmoothingEnabled=false; hx.clearRect(0,0,720,720); hx.drawImage(off,0,0,n,n,0,0,720,720);
-  // CEN-core lines
-  const sc=720/n; hx.strokeStyle='rgba(0,0,0,.45)';hx.setLineDash([4,3]);hx.lineWidth=1;
-  for(const b of t.core){hx.beginPath();hx.moveTo(b*sc,0);hx.lineTo(b*sc,720);hx.moveTo(0,b*sc);hx.lineTo(720,b*sc);hx.stroke();}
-  hx.setLineDash([]);
-  // tracks
-  tx.clearRect(0,0,720,90); const cut=(E.enzyme==='AlwI')?t.alwi:t.bfai; const cmax=Math.max(...cut)||1;
-  const w=720/n;
-  // cut-site (top 42px)
-  tx.fillStyle='#2b6cb0';for(let b=0;b<n;b++){const h=38*cut[b]/cmax;tx.fillRect(b*w,42-h,Math.max(1,w),h);}
-  tx.fillStyle='#888';tx.font='10px sans-serif';tx.fillText(E.enzyme+' cut sites',4,10);
-  // TE (bottom 42px): satellite gray, gypsy red overlaid
-  for(let b=0;b<n;b++){tx.fillStyle='#9aa7b4';tx.fillRect(b*w,90-40*t.sat[b],Math.max(1,w),40*t.sat[b]);}
-  for(let b=0;b<n;b++){tx.fillStyle='rgba(192,21,47,.9)';tx.fillRect(b*w,90-40*t.gyp[b],Math.max(1,w),40*t.gyp[b]);}
-  tx.strokeStyle='rgba(0,0,0,.4)';tx.setLineDash([4,3]);for(const b of t.core){tx.beginPath();tx.moveTo(b*w,0);tx.lineTo(b*w,90);tx.stroke();}tx.setLineDash([]);
+  off.width=n;off.height=n;const img=ox2.createImageData(n,n);const D=img.data;
+  for(let k=0;k<n*n;k++){const v=disp[k];const c=isFinite(v)?cmap((v-lo)/(hi-lo)):[242,242,242];D[k*4]=c[0];D[k*4+1]=c[1];D[k*4+2]=c[2];D[k*4+3]=255;}
+  ox2.putImageData(img,0,0);
+  G={n,t,cmap,lo,hi,center,nz:m.i.length};
+  view={x0:0,y0:0,w:n};
   // colorbar
   const cb=document.getElementById('cb'),cx=cb.getContext('2d');for(let y=0;y<300;y++){const c=cmap(1-y/300);cx.fillStyle=`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;cx.fillRect(0,y,18,1);}
-  document.getElementById('cbhi').textContent=center?'+'+hi:(+hi).toFixed(1);
-  document.getElementById('cblo').textContent=center?lo:(+lo).toFixed(1);
+  draw(); metrics();
   const rn=(E.enzyme==='AlwI')?(' · '+E.rescue):'';
   document.getElementById('title').textContent=`${E.enzyme} · ${E.geno==='WT'?'WT (Col-0)':'CENH3ox'}${rn} · ${E.norm==='oe'?'O/E':E.norm==='vc'?'coverage-balanced':'raw(log)'} · ${E.res} kb · Chr5 (${(t.chrlen/1e6).toFixed(1)} Mb)`;
-  document.getElementById('status').textContent=`${n}×${n} bins · ${m.i.length.toLocaleString()} non-zero contacts`;
 }
-for(const id of ['enzyme','geno','rescue','norm','res']) document.getElementById(id).addEventListener('change',e=>{E[id]=e.target.value;render();});
-document.getElementById('dl').addEventListener('click',()=>{const c=document.createElement('canvas');c.width=720;c.height=812;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,720,812);g.drawImage(hm,0,0);g.drawImage(tk,0,722);const a=document.createElement('a');a.download=`CEN5_${E.enzyme}_${E.geno}_${E.res}kb_${E.norm}.png`;a.href=c.toDataURL();a.click();});
-render();
+function draw(){
+  if(!G)return; const {n,t}=G; const sc=HS/view.w;
+  hx.clearRect(0,0,HS,HS); hx.imageSmoothingEnabled=false;
+  hx.drawImage(off, view.x0, view.y0, view.w, view.w, 0,0, HS,HS);
+  hx.strokeStyle='rgba(0,0,0,.4)';hx.setLineDash([4,3]);hx.lineWidth=1;
+  for(const b of t.core){const sx=(b-view.x0)*sc, sy=(b-view.y0)*sc;hx.beginPath();hx.moveTo(sx,0);hx.lineTo(sx,HS);hx.moveTo(0,sy);hx.lineTo(HS,sy);hx.stroke();}
+  hx.setLineDash([]);
+  // tracks over current x-range
+  tx.clearRect(0,0,HS,TH); const cut=(E.enzyme==='AlwI')?t.alwi:t.bfai; const cmax=Math.max(...cut)||1; const w=HS/view.w;
+  for(let b=Math.floor(view.x0);b<view.x0+view.w&&b<n;b++){const sx=(b-view.x0)*w;const h=36*cut[b]/cmax;tx.fillStyle='#2b6cb0';tx.fillRect(sx,42-h,Math.max(1,w),h);
+    tx.fillStyle='#9aa7b4';tx.fillRect(sx,TH-40*t.sat[b],Math.max(1,w),40*t.sat[b]);
+    tx.fillStyle='rgba(192,21,47,.9)';tx.fillRect(sx,TH-40*t.gyp[b],Math.max(1,w),40*t.gyp[b]);}
+  tx.fillStyle='#777';tx.font='10px sans-serif';tx.fillText(E.enzyme+' cut sites',4,10);
+  tx.strokeStyle='rgba(0,0,0,.4)';tx.setLineDash([4,3]);for(const b of t.core){const sx=(b-view.x0)*w;tx.beginPath();tx.moveTo(sx,0);tx.lineTo(sx,TH);tx.stroke();}tx.setLineDash([]);
+  // Mb ticks
+  tx.fillStyle='#555';tx.font='9px sans-serif';
+  for(let f=0;f<=4;f++){const b=view.x0+f/4*view.w;const mb=(b*t.res/1e6).toFixed(1);tx.fillText(mb,clamp(f/4*HS-8,0,HS-22),TH-2);}
+  document.getElementById('status').textContent=`${G.nz.toLocaleString()} non-zero contacts · view ${(view.x0*t.res/1e6).toFixed(1)}–${((view.x0+view.w)*t.res/1e6).toFixed(1)} Mb · scroll=zoom, drag=pan`;
+}
+function barchart(cid,obj,logy,color){
+  const c=document.getElementById(cid),g=c.getContext('2d');g.clearRect(0,0,272,86);
+  const keys=Object.keys(obj).map(Number).sort((a,b)=>a-b);
+  if(!keys.length){g.fillStyle='#aaa';g.font='11px sans-serif';g.fillText('computing on cluster…',8,46);return;}
+  const vals=keys.map(k=>obj[k]); const mx=Math.max(...vals.map(v=>logy?Math.log10(1+v):v));
+  const w=272/keys.length;
+  g.fillStyle=color;
+  keys.forEach((k,i)=>{const v=logy?Math.log10(1+obj[k]):obj[k];const h=72*v/mx;g.fillRect(i*w,80-h,Math.max(1,w-0.5),h);});
+  g.fillStyle='#888';g.font='9px sans-serif';g.fillText(keys[0],1,86);g.fillText(keys[keys.length-1],256,86);
+}
+function metrics(){
+  if(!MET){document.getElementById('m_reads').textContent='…';return;}
+  const d=MET[`${E.enzyme}_${E.geno}`]; if(!d)return;
+  const r=(E.enzyme==='AlwI')?E.rescue:'unrescued';
+  document.getElementById('m_reads').textContent=d.reads.toLocaleString();
+  document.getElementById('m_contacts').textContent=(d.contacts[r]/1e6).toFixed(1)+' M';
+  document.getElementById('m_mpc').textContent=d.mono_per_concat;
+  document.getElementById('m_len').textContent=d.mean_len+' bp';
+  barchart('ch_order',d.order_hist||{},false,'#2b6cb0');
+  barchart('ch_len',d.len_hist||{},false,'#c0152f');
+}
+// zoom / pan
+hm.addEventListener('wheel',e=>{e.preventDefault();if(!G)return;const r=hm.getBoundingClientRect();const mx=(e.clientX-r.left)/HS,my=(e.clientY-r.top)/HS;
+  const bx=view.x0+mx*view.w,by=view.y0+my*view.w;const f=e.deltaY<0?0.82:1/0.82;let nw=clamp(view.w*f,6,G.n);
+  view.x0=clamp(bx-mx*nw,0,G.n-nw);view.y0=clamp(by-my*nw,0,G.n-nw);view.w=nw;draw();},{passive:false});
+let drag=null;
+hm.addEventListener('mousedown',e=>{drag={x:e.clientX,y:e.clientY,x0:view.x0,y0:view.y0};hm.classList.add('drag');});
+window.addEventListener('mousemove',e=>{if(!drag||!G)return;const dpb=view.w/HS;view.x0=clamp(drag.x0-(e.clientX-drag.x)*dpb,0,G.n-view.w);view.y0=clamp(drag.y0-(e.clientY-drag.y)*dpb,0,G.n-view.w);draw();});
+window.addEventListener('mouseup',()=>{drag=null;hm.classList.remove('drag');});
+document.getElementById('reset').addEventListener('click',()=>{if(G){view={x0:0,y0:0,w:G.n};draw();}});
+for(const id of ['enzyme','geno','rescue','norm','res'])document.getElementById(id).addEventListener('change',ev=>{E[id]=ev.target.value;compute();});
+document.getElementById('dl').addEventListener('click',()=>{const c=document.createElement('canvas');c.width=HS;c.height=HS+TH+4;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(hm,0,0);g.drawImage(tk,0,HS+4);const a=document.createElement('a');a.download=`CEN5_${E.enzyme}_${E.geno}_${E.res}kb_${E.norm}.png`;a.href=c.toDataURL();a.click();});
+getJSON('data/metrics.json').then(d=>{MET=d;metrics();});
+compute();
 </script>
 </body>
 </html>

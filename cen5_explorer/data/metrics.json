@@ -1,0 +1,6 @@
+{
+ "BfaI_WT": {"reads":10303020,"contacts":{"unrescued":173056841,"rescued":180644961},"mono_per_concat":6.13,"mean_len":371,"order_hist":{},"len_hist":{},"len_bin":100},
+ "BfaI_OX": {"reads":8416120,"contacts":{"unrescued":187663173,"rescued":193258254},"mono_per_concat":6.22,"mean_len":405,"order_hist":{},"len_hist":{},"len_bin":100},
+ "AlwI_WT": {"reads":13800226,"contacts":{"unrescued":14156872,"rescued":19207139},"mono_per_concat":1.82,"mean_len":749,"order_hist":{},"len_hist":{},"len_bin":100},
+ "AlwI_OX": {"reads":25616300,"contacts":{"unrescued":15339764,"rescued":24314315},"mono_per_concat":1.52,"mean_len":725,"order_hist":{},"len_hist":{},"len_bin":100}
+}
